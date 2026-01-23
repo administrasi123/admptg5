@@ -151,7 +151,7 @@
                 <h2 id="st-total">0</h2>
             </div>
             <div class="stat-card bg-2"><h6>DATA LENGKAP</h6><h2 id="st-com">0</h2></div>
-            <div class="stat-card bg-3"><h6>SUDAH UNDIAN</h6><h2 id="st-und">0</h2></div>
+            <div class="stat-card bg-3"><h6>SUDAH DAPAT NOTAM</h6><h2 id="st-und">0</h2></div>
             <div class="stat-card bg-4"><h6>SUDAH HADIR</h6><h2 id="st-absen">0</h2></div>
         </div>
 
@@ -200,7 +200,7 @@
 
                 <div class="table-responsive">
                     <table class="table table-hover align-middle" style="min-width: 600px;">
-                        <thead class="table-light small"><tr><th>SEKOLAH</th><th class="text-center">UNDIAN</th><th>KODE</th><th class="text-center">AKSI</th></tr></thead>
+                        <thead class="table-light small"><tr><th>SEKOLAH</th><th class="text-center">NO. TAMPIL</th><th>NO. PESERTA</th><th class="text-center">AKSI</th></tr></thead>
                         <tbody id="body-input" class="small"></tbody>
                     </table>
                 </div>
@@ -274,13 +274,28 @@
                 <button class="btn-close" onclick="closeModal('modal-input')"></button>
             </div>
             <form id="form-peserta">
-                <input type="hidden" id="in-tingkat">
-                <div class="mb-2"><label class="small fw-bold text-secondary">NAMA SEKOLAH</label><input type="text" id="in-sekolah" class="form-control" placeholder="Contoh: SMPN 1 BEKASI" required></div>
-                <div class="mb-2"><label class="small fw-bold text-secondary">EMAIL OFFICIAL</label><input type="email" id="in-email" class="form-control" placeholder="email@sekolah.com"></div>
-                <div class="mb-2"><label class="small fw-bold text-secondary">WHATSAPP</label><input type="tel" id="in-wa" class="form-control" placeholder="08xxx" required></div>
-                <div class="mb-4"><label class="small fw-bold text-secondary">BINDAMPING</label><input type="text" id="in-b1" class="form-control mb-1" placeholder="Nama B1"><input type="text" id="in-b2" class="form-control" placeholder="Nama B2"></div>
-                <button type="submit" class="btn btn-primary w-100 fw-bold py-2">SIMPAN DATA</button>
-            </form>
+            <input type="hidden" id="in-id-edit"> 
+            
+            <input type="hidden" id="in-tingkat">
+            <div class="mb-2">
+                <label class="small fw-bold text-secondary">NAMA SEKOLAH</label>
+                <input type="text" id="in-sekolah" class="form-control" placeholder="Contoh: SMPN 1 BEKASI" required>
+            </div>
+            <div class="mb-2">
+                <label class="small fw-bold text-secondary">EMAIL OFFICIAL</label>
+                <input type="email" id="in-email" class="form-control" placeholder="email@sekolah.com">
+            </div>
+            <div class="mb-2">
+                <label class="small fw-bold text-secondary">WHATSAPP BINDAMPING</label>
+                <input type="tel" id="in-wa" class="form-control" placeholder="08xxx" required>
+            </div>
+            <div class="mb-4">
+                <label class="small fw-bold text-secondary">NAMA BINDAMPING</label>
+                <input type="text" id="in-b1" class="form-control mb-1" placeholder="Nama Bindamping 1">
+                <input type="text" id="in-b2" class="form-control" placeholder="Nama Bindamping 2">
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">SIMPAN DATA</button>
+        </form>
         </div>
     </div>
 
@@ -305,11 +320,24 @@
             <button onclick="kirimWA()" class="btn btn-success w-100 fw-bold"><i class="bi bi-send-fill"></i> KIRIM SEKARANG</button>
         </div>
     </div>
+    <div class="modal-overlay" id="modal-scan-result" style="display: none; z-index: 9999;">
+        <div class="modal-content-box text-center p-4">
+            <div id="scan-icon" class="mb-3" style="font-size: 4rem;"></div>
+            <h2 id="scan-title" class="fw-bold mb-2">STATUS</h2>
+            <h4 id="scan-sekolah" class="text-secondary mb-4">Nama Sekolah</h4>
+            
+            <p id="scan-message" class="alert mb-4"></p>
+
+            <button type="button" class="btn btn-lg btn-primary w-100" onclick="tutupModalScan()">
+                OK, LANJUT SCAN
+            </button>
+        </div>
+    </div>
 
     <script>
         // KONFIGURASI LOGIN
         const APP_PASSWORD = "admin123"; // GANTI PASSWORD DI SINI
-        const API_URL = "https://script.google.com/macros/s/AKfycbxLGPFwQf_sATouSMQPzHJkBdQpLONbmVXMCiAMRvT9yFDitHEZ8OmJhKCIaC7K7GUV/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbxnFon8h-pVczWlzfF2Ccl4aRMP6TO5cOmn23NbyDMmyv4-qGeyPXLQWMQh7T76SxiF/exec"; 
         
         let db = [];
         let html5QrcodeScanner = null;
@@ -406,8 +434,27 @@
         }
 
         function tambahPeserta() {
+            document.getElementById('form-peserta').reset(); // Reset form agar kosong
+            document.getElementById('in-id-edit').value = ""; // Pastikan ID kosong (tanda input baru)
             document.getElementById('in-tingkat').value = currentTab;
             document.getElementById('lbl-form-tingkat').innerText = currentTab; 
+            openModal('modal-input');
+        }
+
+        function editDataPeserta(id) {
+            const data = db.find(x => x.id == id);
+            if(!data) return;
+
+            // Isi form dengan data lama
+            document.getElementById('in-id-edit').value = id; 
+            document.getElementById('in-tingkat').value = data.tingkat;
+            document.getElementById('in-sekolah').value = data.sekolah;
+            document.getElementById('in-email').value = data.email || '';
+            document.getElementById('in-wa').value = data.wa;
+            document.getElementById('in-b1').value = data.b1 || '';
+            document.getElementById('in-b2').value = data.b2 || '';
+            
+            document.getElementById('lbl-form-tingkat').innerText = data.tingkat + " (EDIT)"; 
             openModal('modal-input');
         }
 
@@ -467,9 +514,12 @@
                     <td class="text-center"><span class="badge ${x.tampil==='-'?'bg-secondary':'bg-primary'}">${x.tampil}</span></td>
                     <td class="small font-monospace text-nowrap">${x.kode||'-'}</td>
                     <td class="text-center text-nowrap">
-                        <button class="btn btn-sm btn-dark" onclick="showQR(${x.id})" title="Lihat QR"><i class="bi bi-qr-code"></i></button>
-                        <button class="btn btn-sm btn-success" onclick="kirimInfoPeserta(${x.id})" title="Kirim WA & ID Card"><i class="bi bi-whatsapp"></i></button>
-                        <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle"><i class="bi bi-pencil"></i></button>
+                        <button onclick="editDataPeserta(${x.id})" class="btn btn-sm btn-warning text-white rounded-circle" title="Edit Profil"><i class="bi bi-pencil-square"></i></button>
+                        
+                        <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle" title="Edit No Tampil"><i class="bi bi-123"></i></button>
+                        
+                        <button class="btn btn-sm btn-dark rounded-circle" onclick="showQR(${x.id})" title="Lihat QR"><i class="bi bi-qr-code"></i></button>
+                        <button class="btn btn-sm btn-success rounded-circle" onclick="kirimInfoPeserta(${x.id})" title="Kirim WA"><i class="bi bi-whatsapp"></i></button>
                         <button onclick="hapusData(${x.id})" class="btn btn-sm btn-outline-danger rounded-circle"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>`;
@@ -528,9 +578,7 @@
             if(html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner.clear(); html5QrcodeScanner = null; if(document.getElementById('btn-start-cam')) { document.getElementById('btn-start-cam').disabled = false; document.getElementById('btn-stop-cam').disabled = true; } }).catch(err => console.log("Stop failed", err)); }
         }
 
-        function restartScanner() { if(html5QrcodeScanner) { stopScanner(); setTimeout(() => startScanner(), 500); toast("Me-refresh Lensa...", "info"); } else { startScanner(); } }
-
-        function onScanSuccess(decodedText) {
+function onScanSuccess(decodedText) {
             const cleanCode = decodedText.trim().toUpperCase();
             const idx = db.findIndex(x => x.kode === cleanCode);
             if(idx >= 0) {
@@ -563,22 +611,83 @@
                 if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'attendance', id:id, status: false})});
             }
         }
+        function addLogAbsen(id, nama, status) {
+            const tbody = document.getElementById('log-absen-body'); 
+            const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const rowId = `log_${Date.now()}`;
+            const rowHTML = `<tr id="${rowId}"><td>${now}</td><td class="fw-bold">${nama}</td><td class="status-cell"><span class="badge bg-success">${status}</span></td><td class="text-center"><button class="btn btn-sm btn-outline-danger py-0" onclick="batalAbsen(${id}, '${rowId}')" title="Batalkan Absen"><i class="bi bi-x-lg"></i> Batal</button></td></tr>`;
+            tbody.insertAdjacentHTML('afterbegin', rowHTML);
+        }
+
+        function batalAbsen(id, rowElemId) {
+            if(!confirm("Batalkan kehadiran peserta ini?")) return;
+            const idx = db.findIndex(x => x.id == id);
+            if(idx >= 0) {
+                db[idx].absen = false; renderTableInput(); updateStats();
+                const row = document.getElementById(rowElemId); if(row) { row.querySelector('.status-cell').innerHTML = '<span class="badge bg-secondary">DIBATALKAN</span>'; const btn = row.querySelector('button'); if(btn) btn.remove(); }
+                toast(`${db[idx].sekolah} Absen Dibatalkan`, 'warning');
+                if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'attendance', id:id, status: false})});
+            }
+        }
         function resetAbsenHarian() { if(confirm("Reset log?")) document.getElementById('log-absen-body').innerHTML = ''; }
 
         document.getElementById('form-peserta').addEventListener('submit', function(e){
             e.preventDefault();
-            const newData = {
-                action: 'add', id: Date.now(),
-                sekolah: document.getElementById('in-sekolah').value.toUpperCase(),
-                email: document.getElementById('in-email').value,
-                tingkat: document.getElementById('in-tingkat').value,
-                wa: document.getElementById('in-wa').value,
-                b1: document.getElementById('in-b1').value, b2: document.getElementById('in-b2').value,
-                tampil:'-', kode:'-', v_lkbbt:0, v_maket:0, v_dance:0, v_ios:0, v_poster:0, v_note:'-', v_status:'BELUM LENGKAP', absen: false
-            };
-            db.push(newData); closeModal('modal-input'); renderAll(); toast("Data Disimpan Lokal");
-            if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(newData)});
-            this.reset();
+            
+            const idEdit = document.getElementById('in-id-edit').value;
+            const sekolahVal = document.getElementById('in-sekolah').value.toUpperCase();
+            const emailVal = document.getElementById('in-email').value;
+            const waVal = document.getElementById('in-wa').value;
+            const b1Val = document.getElementById('in-b1').value;
+            const b2Val = document.getElementById('in-b2').value;
+            const tingkatVal = document.getElementById('in-tingkat').value;
+
+            if (idEdit) {
+                // --- MODE EDIT ---
+                const idx = db.findIndex(x => x.id == idEdit);
+                if(idx >= 0) {
+                    db[idx].sekolah = sekolahVal;
+                    db[idx].email = emailVal;
+                    db[idx].wa = waVal;
+                    db[idx].b1 = b1Val;
+                    db[idx].b2 = b2Val;
+                    
+                    toast("Data Berhasil Diperbarui");
+                    
+                    if(!API_URL.includes("GANTI")) {
+                        fetch(API_URL, {
+                            method:'POST', 
+                            mode:'no-cors', 
+                            body:JSON.stringify({
+                                action: 'update_data',
+                                id: idEdit,
+                                sekolah: sekolahVal,
+                                email: emailVal,
+                                wa: waVal,
+                                b1: b1Val,
+                                b2: b2Val
+                            })
+                        });
+                    }
+                }
+            } else {
+                // --- MODE TAMBAH BARU ---
+                const newData = {
+                    action: 'add', id: Date.now(),
+                    sekolah: sekolahVal,
+                    email: emailVal,
+                    tingkat: tingkatVal,
+                    wa: waVal,
+                    b1: b1Val, b2: b2Val,
+                    tampil:'-', kode:'-', v_lkbbt:0, v_maket:0, v_dance:0, v_ios:0, v_poster:0, v_note:'-', v_status:'BELUM LENGKAP', absen: false
+                };
+                db.push(newData);
+                toast("Data Disimpan Lokal");
+                if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(newData)});
+            }
+
+            closeModal('modal-input'); 
+            renderAll(); 
         });
 
         function simpanValidasi(id) {
@@ -589,10 +698,10 @@
             if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'validate', id:id, ...db[idx]})});
         }
         function editUndian(id) {
-            const val = prompt("Masukkan No Undian:");
+            const val = prompt("Masukkan No Tampil:");
             if(val) {
                 const idx = db.findIndex(x => x.id == id); db[idx].tampil = val; db[idx].kode = `PTG-${db[idx].tingkat==='SMP'?'G':'T'}-${val.padStart(3,'0')}`;
-                renderAll(); updateStats(); toast("No Undian Diupdate");
+                renderAll(); updateStats(); toast("No Tampil Diupdate");
                 if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'edit', id:id, tampil:val, kode:db[idx].kode})});
             }
         }
@@ -631,9 +740,9 @@
         function kirimWA() { window.open(`https://api.whatsapp.com/send?phone=${document.getElementById('wa-num').value}&text=${encodeURIComponent(document.getElementById('wa-msg').value)}`, '_blank'); closeModal('modal-wa'); }
         function cleanNum(n) { let num = String(n).replace(/\D/g,''); if(num.startsWith('0')) num = '62' + num.substring(1); if(num.startsWith('8')) num = '62' + num; return num; }
         
-        function exportPDFList() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); let list = db.filter(x => x.tingkat === currentTab); list.sort((a,b)=> { const vA = (a.tampil==='-'?!1:parseInt(a.tampil))||999; const vB = (b.tampil==='-'?!1:parseInt(b.tampil))||999; return vA - vB; }); doc.text(`DATA ${currentTab}`,14,20); doc.autoTable({startY:30, head:[['No','Sekolah','Undian','Kode']], body:list.map((x,i)=>[i+1,x.sekolah,x.tampil,x.kode])}); doc.save('Peserta.pdf'); }
+        function exportPDFList() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); let list = db.filter(x => x.tingkat === currentTab); list.sort((a,b)=> { const vA = (a.tampil==='-'?!1:parseInt(a.tampil))||999; const vB = (b.tampil==='-'?!1:parseInt(b.tampil))||999; return vA - vB; }); doc.text(`DATA ${currentTab}`,14,20); doc.autoTable({startY:30, head:[['No','Sekolah','No. Tampil','No. Peserta']], body:list.map((x,i)=>[i+1,x.sekolah,x.tampil,x.kode])}); doc.save('Peserta.pdf'); }
         function exportPDFRekap() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); let list = db.filter(x => x.tingkat === currentTab); doc.text(`REKAP ${currentTab}`,14,20); doc.autoTable({startY:30,head:[['Sekolah','L','M','D','I','P','Status']],body:list.map(x=>[x.sekolah,x.v_lkbbt?'V':'-',x.v_maket?'V':'-',x.v_dance?'V':'-',x.v_ios?'V':'-',x.v_poster?'V':'-',x.v_status])}); doc.save('Rekap.pdf'); }
-        function exportExcel() { const list = db.filter(x => x.tingkat === currentTab); const ws = XLSX.utils.json_to_sheet(list.map((x,i)=>({No:i+1, Sekolah:x.sekolah, Undian:x.tampil, Kode:x.kode, Status:x.v_status}))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data"); XLSX.writeFile(wb, "Data.xlsx"); }
+        function exportExcel() { const list = db.filter(x => x.tingkat === currentTab); const ws = XLSX.utils.json_to_sheet(list.map((x,i)=>({No:i+1, Sekolah:x.sekolah, NO:x.tampil, Kode:x.kode, Status:x.v_status}))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data"); XLSX.writeFile(wb, "Data.xlsx"); }
         function cetakSurat(id) {
     const x = db.find(d => d.id == id);
     if (!x) return;
@@ -736,4 +845,3 @@
     </script>
 </body>
 </html>
-
