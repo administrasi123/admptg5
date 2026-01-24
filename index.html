@@ -192,9 +192,18 @@
                         <input class="form-check-input" type="checkbox" id="chk-hide-absen" onchange="renderAll()" checked>
                         <label class="form-check-label small fw-bold text-secondary" for="chk-hide-absen">Sembunyikan Yang Sudah Hadir</label>
                     </div>
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-success btn-sm fw-bold" onclick="exportExcel()"><i class="bi bi-file-excel"></i></button>
-                        <button class="btn btn-danger btn-sm fw-bold" onclick="exportPDFList()"><i class="bi bi-file-pdf"></i></button>
+                    <div class="d-flex gap-1 align-items-center">
+                        <button class="btn btn-success btn-sm fw-bold" onclick="exportExcel()" title="Export Data Peserta (Excel)"><i class="bi bi-file-excel"></i></button>
+                        <button class="btn btn-danger btn-sm fw-bold" onclick="exportPDFList()" title="Export Data Peserta (PDF)"><i class="bi bi-file-pdf"></i></button>
+                        
+                        <div class="vr mx-2"></div>
+                        
+                        <button onclick="downloadRekapTMExcel()" class="btn btn-success btn-sm fw-bold shadow-sm" title="Download Rekap TM (Excel)">
+                            <i class="bi bi-file-earmark-spreadsheet-fill"></i> Excel TM
+                        </button>
+                        <button onclick="downloadRekapTMPDF()" class="btn btn-danger btn-sm fw-bold shadow-sm" title="Download Rekap TM (PDF)">
+                            <i class="bi bi-file-earmark-pdf-fill"></i> PDF TM
+                        </button>
                     </div>
                 </div>
 
@@ -501,29 +510,42 @@
                 return; 
             }
 
-            list.forEach(x => {
-                const rowClass = x.absen ? 'table-success fade-in' : 'fade-in';
-                const statusBadge = x.absen ? '<span class="badge bg-success"><i class="bi bi-check"></i> HADIR</span>' : '';
+            // --- TEMPEL KODE BARU INI ---
+        list.forEach(x => {
+        const rowClass = x.absen ? 'table-success fade-in' : 'fade-in';
+        const statusBadge = x.absen ? '<span class="badge bg-success"><i class="bi bi-check"></i> HADIR</span>' : '';
+        
+        // LOGIKA TOMBOL TM (Technical Meeting)
+        // Jika absen_tm bernilai true, tombol jadi Biru. Jika tidak, tombol jadi Abu-abu.
+        let tombolTM = '';
+        if (x.absen_tm === true) {
+             tombolTM = `<button onclick="toggleTM(${x.id})" class="btn btn-sm btn-primary rounded-circle me-1" title="Sudah Hadir TM (Klik untuk Batal)">TM</button>`;
+        } else {
+             tombolTM = `<button onclick="toggleTM(${x.id})" class="btn btn-sm btn-outline-secondary rounded-circle me-1" title="Klik untuk Absen TM">TM</button>`;
+        }
 
-                tbody.innerHTML += `
-                <tr class="${rowClass}">
-                    <td class="fw-bold text-nowrap">
-                        ${x.sekolah}
-                        <div class="small">${statusBadge}</div>
-                    </td>
-                    <td class="text-center"><span class="badge ${x.tampil==='-'?'bg-secondary':'bg-primary'}">${x.tampil}</span></td>
-                    <td class="small font-monospace text-nowrap">${x.kode||'-'}</td>
-                    <td class="text-center text-nowrap">
-                        <button onclick="editDataPeserta(${x.id})" class="btn btn-sm btn-warning text-white rounded-circle" title="Edit Profil"><i class="bi bi-pencil-square"></i></button>
-                        
-                        <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle" title="Edit No Tampil"><i class="bi bi-123"></i></button>
-                        
-                        <button class="btn btn-sm btn-dark rounded-circle" onclick="showQR(${x.id})" title="Lihat QR"><i class="bi bi-qr-code"></i></button>
-                        <button class="btn btn-sm btn-success rounded-circle" onclick="kirimInfoPeserta(${x.id})" title="Kirim WA"><i class="bi bi-whatsapp"></i></button>
-                        <button onclick="hapusData(${x.id})" class="btn btn-sm btn-outline-danger rounded-circle"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>`;
-            });
+        // Label kecil "HADIR TM" di bawah nama sekolah
+        let labelTM = x.absen_tm === true ? '<div class="badge bg-primary ultra-small" style="font-size:0.6rem; margin-top:2px;">HADIR TM</div>' : '';
+
+        tbody.innerHTML += `
+        <tr class="${rowClass}">
+            <td class="fw-bold text-nowrap">
+                ${x.sekolah}
+                ${labelTM} <div class="small">${statusBadge}</div>
+            </td>
+            <td class="text-center"><span class="badge ${x.tampil==='-'?'bg-secondary':'bg-primary'}">${x.tampil}</span></td>
+            <td class="small font-monospace text-nowrap">${x.kode||'-'}</td>
+            <td class="text-center text-nowrap">
+                
+                ${tombolTM} <button onclick="editDataPeserta(${x.id})" class="btn btn-sm btn-warning text-white rounded-circle" title="Edit Profil"><i class="bi bi-pencil-square"></i></button>
+                <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle" title="Edit No Tampil"><i class="bi bi-123"></i></button>
+                <button class="btn btn-sm btn-dark rounded-circle" onclick="showQR(${x.id})" title="Lihat QR"><i class="bi bi-qr-code"></i></button>
+                <button class="btn btn-sm btn-success rounded-circle" onclick="kirimInfoPeserta(${x.id})" title="Kirim WA"><i class="bi bi-whatsapp"></i></button>
+                <button onclick="hapusData(${x.id})" class="btn btn-sm btn-outline-danger rounded-circle"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>`;
+    });
+    // --- SELESAI ---
         }
 
         function renderTableValidasi() {
@@ -679,7 +701,7 @@ function onScanSuccess(decodedText) {
                     tingkat: tingkatVal,
                     wa: waVal,
                     b1: b1Val, b2: b2Val,
-                    tampil:'-', kode:'-', v_lkbbt:0, v_maket:0, v_dance:0, v_ios:0, v_poster:0, v_note:'-', v_status:'BELUM LENGKAP', absen: false
+                    tampil:'-', kode:'-', v_lkbbt:0, v_maket:0, v_dance:0, v_ios:0, v_poster:0, v_note:'-', v_status:'BELUM LENGKAP', absen: false, absen_tm: false
                 };
                 db.push(newData);
                 toast("Data Disimpan Lokal");
@@ -842,7 +864,77 @@ function onScanSuccess(decodedText) {
 
         function toast(msg, type='success') { const box = document.getElementById('toast-box'); const el = document.createElement('div'); el.className = 'toast-item'; el.style.borderLeftColor = type==='success'?'#22c55e':'#ef4444'; el.innerHTML = `<b>${msg}</b>`; box.appendChild(el); setTimeout(()=>el.remove(), 3000); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; } function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    // --- KODE BARU MULAI ---
+// Fungsi ini bekerja seperti saklar lampu. Klik sekali nyala (Hadir), klik lagi mati (Batal).
+function toggleTM(id) {
+    // 1. Cari data peserta berdasarkan ID
+    const idx = db.findIndex(x => x.id == id);
+    
+    if (idx >= 0) {
+        // 2. Balik statusnya (Jika True jadi False, jika False jadi True)
+        // Jika data lama belum punya status TM, otomatis dianggap False dulu
+        if (typeof db[idx].absen_tm === 'undefined') {
+            db[idx].absen_tm = true;
+        } else {
+            db[idx].absen_tm = !db[idx].absen_tm;
+        }
+
+        // 3. Simpan perubahan (update tampilan tabel)
+        renderTableInput(); 
+
+        // 4. Munculkan pesan kecil (Toast)
+        const statusPesan = db[idx].absen_tm ? "✅ TERDATA: Hadir Technical Meeting" : "❌ BATAL: Absensi TM Dihapus";
+        const warnaPesan = db[idx].absen_tm ? "primary" : "secondary"; // Biru atau Abu
+        toast(`${db[idx].sekolah} - ${statusPesan}`, warnaPesan);
+        
+        // Simpan ke Server (Biarkan baris ini apa adanya)
+        if(!API_URL.includes("GANTI")) {
+            fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'update_tm', id:db[idx].id, status: db[idx].absen_tm})});
+        }
+    }
+}
+// --- KODE BARU SELESAI ---
+// --- FUNGSI DOWNLOAD REKAP TM (VERSI EXCEL) ---
+function downloadRekapTMExcel() {
+    // 1. Ambil data yang SUDAH ABSEN TM
+    const dataHadir = db.filter(x => x.absen_tm === true);
+
+    if (dataHadir.length === 0) {
+        alert("Belum ada data peserta yang hadir Technical Meeting!");
+        return;
+    }
+
+    // 2. Susun data untuk Excel
+    const dataToExport = dataHadir.map((x, index) => ({
+        "No": index + 1,
+        "Nama Sekolah": x.sekolah,
+        "Tingkat": x.tingkat,
+        "Kode Registrasi": x.kode || '-',
+        "Pangkalan": x.pangkalan || '-',
+        "Status Kehadiran": "HADIR", // Status text
+        "Waktu Absen": new Date().toLocaleString('id-ID')
+    }));
+
+    // 3. Buat Sheet Excel
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+    // 4. Atur Lebar Kolom (Opsional, biar rapi)
+    const wscols = [
+        {wch: 5},  // No
+        {wch: 30}, // Sekolah
+        {wch: 10}, // Tingkat
+        {wch: 15}, // Kode
+        {wch: 25}, // Pangkalan
+        {wch: 15}, // Status
+        {wch: 20}  // Waktu
+    ];
+    ws['!cols'] = wscols;
+
+    // 5. Buat File & Download
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absen TM");
+    XLSX.writeFile(wb, `REKAP_TM_${new Date().getTime()}.xlsx`);
+}
     </script>
 </body>
 </html>
-
