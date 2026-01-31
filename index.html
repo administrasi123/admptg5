@@ -71,6 +71,13 @@
         .chk-label { width: 28px; height: 28px; background: #e2e8f0; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: transparent; transition: 0.2s; }
         .custom-chk:checked + .chk-label { background: #10b981; color: white; transform: scale(1.1); }
 
+        .switch-sm { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch-sm input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #3b82f6; }
+        input:checked + .slider:before { transform: translateX(14px); }
+
         @media (max-width: 768px) {
             .sidebar { left: -270px; } .sidebar.active { left: 0; box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
             .main-content { margin-left: 0; padding: 80px 15px 30px 15px; }
@@ -128,7 +135,7 @@
         <div class="stats-row">
             <div class="stat-card bg-1"><h6>TOTAL PESERTA (<span id="lbl-tab">SMP</span>)</h6><h2 id="st-total">0</h2></div>
             <div class="stat-card bg-2"><h6>BERKAS LENGKAP</h6><h2 id="st-com">0</h2></div>
-            <div class="stat-card bg-3"><h6>SUDAH DAPAT NOTAM</h6><h2 id="st-und">0</h2></div>
+            <div class="stat-card bg-3"><h6>SUDAH KIRIM BERKAS</h6><h2 id="st-submit">0</h2></div>
             <div class="stat-card bg-4"><h6>SUDAH HADIR</h6><h2 id="st-absen">0</h2></div>
         </div>
 
@@ -194,21 +201,34 @@
             </div>
 
             <div id="view-validasi" class="view-section">
-                <div class="d-flex justify-content-between mb-4 align-items-center">
+                <div class="d-flex justify-content-between mb-4 align-items-center flex-wrap gap-2">
                     <h5 class="fw-bold m-0 text-primary"><i class="bi bi-patch-check-fill"></i> VALIDASI BERKAS</h5>
-                    <button class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="exportPDFRekap()"><i class="bi bi-printer-fill"></i> CETAK REKAP</button>
+                    <div class="d-flex gap-2">
+                         <button class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="downloadRekapSimple()"><i class="bi bi-file-earmark-pdf-fill"></i> PDF REKAP PENGIRIMAN</button>
+                        <button class="btn btn-secondary btn-sm fw-bold shadow-sm" onclick="exportPDFRekap()"><i class="bi bi-printer-fill"></i> PDF VALIDASI (ADMIN)</button>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <button class="tab-btn active-smp" id="tab-val-smp" onclick="setTab('SMP')">SMP</button>
-                    <button class="tab-btn" id="tab-val-sma" onclick="setTab('SMA')">SMA</button>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-md-4">
+                        <div class="d-flex gap-1">
+                            <button class="tab-btn active-smp" id="tab-val-smp" onclick="setTab('SMP')">SMP</button>
+                            <button class="tab-btn" id="tab-val-sma" onclick="setTab('SMA')">SMA</button>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-8">
+                        <input type="text" id="cari-validasi" class="form-control" placeholder="Cari Nama Sekolah di Validasi..." onkeyup="renderTableValidasi()">
+                    </div>
                 </div>
+
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle border" style="min-width: 800px;">
+                    <table class="table table-hover align-middle border" style="min-width: 900px;">
                         <thead class="table-dark small">
                             <tr>
-                                <th width="25%">SEKOLAH</th>
-                                <th width="35%" class="text-center">KELENGKAPAN</th>
-                                <th width="20%">CATATAN</th>
+                                <th width="20%">SEKOLAH</th>
+                                <th width="15%" class="text-center">TERIMA BERKAS</th>
+                                <th width="30%" class="text-center">CHECKLIST VALIDASI</th>
+                                <th width="15%">CATATAN</th>
                                 <th width="10%" class="text-center">STATUS</th>
                                 <th width="10%" class="text-center">AKSI</th>
                             </tr>
@@ -294,54 +314,34 @@
                 <h5 class="fw-bold"><i class="bi bi-whatsapp"></i> KIRIM PESAN MANUAL</h5>
                 <button class="btn-close" onclick="closeModal('modal-wa')"></button>
             </div>
-            
-            <div class="alert alert-warning small py-2 mb-3">
-                <i class="bi bi-exclamation-triangle-fill"></i> Hindari spam! Kirim manual melalui aplikasi WA.
-            </div>
-
+            <div class="alert alert-warning small py-2 mb-3"><i class="bi bi-exclamation-triangle-fill"></i> Hindari spam! Kirim manual melalui aplikasi WA.</div>
             <label class="small fw-bold text-secondary">NOMOR TUJUAN</label>
             <div class="input-group mb-3">
                 <input type="text" id="wa-num" class="form-control fw-bold border-success text-dark" readonly>
-                <button class="btn btn-outline-success" type="button" onclick="copyInput('wa-num')">
-                    <i class="bi bi-copy"></i> SALIN
-                </button>
+                <button class="btn btn-outline-success" type="button" onclick="copyInput('wa-num')"><i class="bi bi-copy"></i> SALIN</button>
             </div>
-
             <label class="small fw-bold text-secondary">ISI PESAN</label>
             <textarea id="wa-msg" class="form-control border-success mb-2" rows="6"></textarea>
-            <button onclick="copyInput('wa-msg')" class="btn btn-success w-100 fw-bold mb-2">
-                <i class="bi bi-clipboard-check"></i> SALIN PESAN
-            </button>
-            
+            <button onclick="copyInput('wa-msg')" class="btn btn-success w-100 fw-bold mb-2"><i class="bi bi-clipboard-check"></i> SALIN PESAN</button>
             <hr>
-            
-            <a id="btn-open-wa-manual" href="#" target="_blank" class="btn btn-outline-dark w-100 btn-sm">
-                <i class="bi bi-box-arrow-up-right"></i> Buka WhatsApp Web/App
-            </a>
-            
-            <div id="msg-img-info" class="alert alert-info small mt-3" style="display:none;">
-                <i class="bi bi-image"></i> <b>Gambar ID Card telah didownload.</b><br>Silakan lampirkan gambar tersebut secara manual saat mengirim pesan di WhatsApp.
-            </div>
+            <a id="btn-open-wa-manual" href="#" target="_blank" class="btn btn-outline-dark w-100 btn-sm"><i class="bi bi-box-arrow-up-right"></i> Buka WhatsApp Web/App</a>
+            <div id="msg-img-info" class="alert alert-info small mt-3" style="display:none;"><i class="bi bi-image"></i> <b>Gambar ID Card telah didownload.</b><br>Silakan lampirkan gambar tersebut secara manual saat mengirim pesan di WhatsApp.</div>
         </div>
     </div>
 
     <div class="modal-overlay" id="modal-scan-result" style="display: none; z-index: 2100;">
         <div class="modal-content-box text-center p-4">
-            <div class="mb-3 text-success">
-                <i class="bi bi-check-circle-fill" style="font-size: 5rem;"></i>
-            </div>
+            <div class="mb-3 text-success"><i class="bi bi-check-circle-fill" style="font-size: 5rem;"></i></div>
             <h2 class="fw-bold mb-2">SCAN BERHASIL!</h2>
             <h4 id="scan-sekolah" class="text-primary fw-bold mb-4 border-bottom pb-3">NAMA SEKOLAH</h4>
             <div class="alert alert-success">Peserta telah tercatat hadir dalam sistem.</div>
-            <button type="button" class="btn btn-lg btn-primary w-100 shadow fw-bold" onclick="tutupModalScan()">
-                OK, LANJUT SCAN (ENTER)
-            </button>
+            <button type="button" class="btn btn-lg btn-primary w-100 shadow fw-bold" onclick="tutupModalScan()">OK, LANJUT SCAN (ENTER)</button>
         </div>
     </div>
 
     <script>
         // --- KONFIGURASI UTAMA ---
-        const APP_PASSWORD = "admin123"; // GANTI PASSWORD DI SINI
+        const APP_PASSWORD = "admin123";
         const API_URL = "https://script.google.com/macros/s/AKfycbxnFon8h-pVczWlzfF2Ccl4aRMP6TO5cOmn23NbyDMmyv4-qGeyPXLQWMQh7T76SxiF/exec"; 
         
         let db = [];
@@ -355,16 +355,7 @@
                 document.querySelector('.main-content').classList.add('logged-in');
             }
             document.getElementById('loader').style.display = 'none';
-            if(API_URL.includes("GANTI") || API_URL.includes("exec")) {
-                db = [
-                    {id:1, sekolah:"SMPN 1 CONTOH", tingkat:"SMP", wa:"08123456789", kode:"PTG-G-001", tampil:"1", v_status:"BELUM LENGKAP", absen: false, absen_tm: false},
-                    {id:2, sekolah:"SMAN 2 CONTOH", tingkat:"SMA", wa:"08129876543", kode:"PTG-T-005", tampil:"5", v_status:"LENGKAP", absen: false, absen_tm: true}
-                ];
-                renderAll();
-                fetchData();
-            } else {
-                fetchData();
-            }
+            fetchData();
         };
 
         function handleLogin(e) {
@@ -378,16 +369,11 @@
                     document.querySelector('.main-content').classList.add('logged-in');
                     toast("Berhasil Login Admin", "success");
                 }, 500);
-            } else {
-                alert("PASSWORD SALAH!");
-                document.getElementById('password-input').value = '';
-            }
+            } else { alert("PASSWORD SALAH!"); document.getElementById('password-input').value = ''; }
         }
+
         function logoutSystem() {
-            if(confirm("Keluar dari sistem admin?")) {
-                sessionStorage.removeItem('ptg_login');
-                location.reload();
-            }
+            if(confirm("Keluar dari sistem admin?")) { sessionStorage.removeItem('ptg_login'); location.reload(); }
         }
 
         async function fetchData() {
@@ -400,21 +386,19 @@
                     db.forEach(x => { 
                         if(typeof x.absen === 'undefined') x.absen = false;
                         if(typeof x.absen_tm === 'undefined') x.absen_tm = false;
+                        if(typeof x.is_submitted === 'undefined') x.is_submitted = false; // NEW FIELD
                     });
                     renderAll();
                     if(sessionStorage.getItem('ptg_login') === 'true') toast("Data Terbaru Dimuat");
                 }
             } catch (error) {
                 console.log("Menggunakan data lokal/cache");
-            } finally {
-                document.getElementById('loader').style.display = 'none';
-            }
+            } finally { document.getElementById('loader').style.display = 'none'; }
         }
 
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('active');
-            document.querySelector('.sidebar-overlay').style.display = 
-                document.querySelector('.sidebar').classList.contains('active') ? 'block' : 'none';
+            document.querySelector('.sidebar-overlay').style.display = document.querySelector('.sidebar').classList.contains('active') ? 'block' : 'none';
         }
 
         function switchView(v) {
@@ -431,8 +415,10 @@
             currentTab = t;
             ['tab-in-smp', 'tab-in-sma', 'tab-val-smp', 'tab-val-sma'].forEach(id => {
                 const el = document.getElementById(id);
-                el.className = 'tab-btn';
-                if(id.includes(t.toLowerCase())) el.className = t === 'SMP' ? 'tab-btn active-smp' : 'tab-btn active-sma';
+                if(el) {
+                    el.className = 'tab-btn';
+                    if(id.includes(t.toLowerCase())) el.className = t === 'SMP' ? 'tab-btn active-smp' : 'tab-btn active-sma';
+                }
             });
             renderAll();
         }
@@ -449,7 +435,7 @@
             const list = db.filter(x => x.tingkat === currentTab);
             document.getElementById('st-total').innerText = list.length;
             document.getElementById('st-com').innerText = list.filter(x => x.v_status === 'LENGKAP').length;
-            document.getElementById('st-und').innerText = list.filter(x => x.tampil !== '-' && x.tampil).length;
+            document.getElementById('st-submit').innerText = list.filter(x => x.is_submitted).length; // UPDATE STATS
             document.getElementById('st-absen').innerText = list.filter(x => x.absen).length;
         }
 
@@ -482,41 +468,63 @@
 
                 tbody.innerHTML += `
                 <tr class="${rowClass}">
-                    <td class="fw-bold">
-                        ${x.sekolah} <br>
-                        ${statusBadge} ${labelTM}
-                    </td>
+                    <td class="fw-bold">${x.sekolah} <br>${statusBadge} ${labelTM}</td>
                     <td class="text-center"><span class="badge ${x.tampil==='-'?'bg-secondary':'bg-primary'} fs-6">${x.tampil}</span></td>
                     <td class="font-monospace text-muted">${x.kode||'-'}</td>
                     <td class="text-center text-nowrap">
-                        <button onclick="toggleTM(${x.id})" class="btn btn-sm ${btnTMClass} rounded-circle me-1" title="Absen TM">${btnTMIcon}</button>
-                        <button onclick="editDataPeserta(${x.id})" class="btn btn-sm btn-warning text-white rounded-circle" title="Edit"><i class="bi bi-pencil-square"></i></button>
-                        <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle" title="No Tampil"><i class="bi bi-123"></i></button>
-                        <button class="btn btn-sm btn-dark rounded-circle" onclick="showQR(${x.id})" title="QR"><i class="bi bi-qr-code"></i></button>
-                        <button class="btn btn-sm btn-success rounded-circle" onclick="kirimInfoPeserta(${x.id})" title="WA Manual"><i class="bi bi-whatsapp"></i></button>
+                        <button onclick="toggleTM(${x.id})" class="btn btn-sm ${btnTMClass} rounded-circle me-1">${btnTMIcon}</button>
+                        <button onclick="editDataPeserta(${x.id})" class="btn btn-sm btn-warning text-white rounded-circle"><i class="bi bi-pencil-square"></i></button>
+                        <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle"><i class="bi bi-123"></i></button>
+                        <button class="btn btn-sm btn-dark rounded-circle" onclick="showQR(${x.id})"><i class="bi bi-qr-code"></i></button>
+                        <button class="btn btn-sm btn-success rounded-circle" onclick="kirimInfoPeserta(${x.id})"><i class="bi bi-whatsapp"></i></button>
                         <button onclick="hapusData(${x.id})" class="btn btn-sm btn-outline-danger rounded-circle"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>`;
             });
         }
 
+        // --- UPDATED: RENDER TABLE VALIDASI DENGAN TOGGLE TERIMA BERKAS ---
         function renderTableValidasi() {
-            const tbody = document.getElementById('body-validasi'); tbody.innerHTML = '';
-            const list = db.filter(x => x.tingkat === currentTab);
+            const tbody = document.getElementById('body-validasi'); 
+            tbody.innerHTML = '';
             
+            const searchKey = document.getElementById('cari-validasi').value.toUpperCase();
+            let list = db.filter(x => x.tingkat === currentTab && x.sekolah.toUpperCase().includes(searchKey));
+            
+            list.sort((a, b) => {
+                const valA = (a.tampil === '-' || !a.tampil) ? 999 : parseInt(a.tampil);
+                const valB = (b.tampil === '-' || !b.tampil) ? 999 : parseInt(b.tampil);
+                return valA - valB;
+            });
+
+            if(list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted bg-light">Sekolah tidak ditemukan.</td></tr>`;
+                return;
+            }
+
             list.forEach(x => {
                 const badge = x.v_status === 'LENGKAP' ? 'bg-success' : 'bg-danger';
                 const mkChk = (col, label) => `<div class="chk-container"><div class="chk-title">${label}</div><input type="checkbox" id="${col}_${x.id}" class="custom-chk" ${x['v_'+col]?'checked':''}><label for="${col}_${x.id}" class="chk-label"><i class="bi bi-check-lg"></i></label></div>`;
                 
+                const toggleHTML = `
+                <label class="switch-sm">
+                  <input type="checkbox" onchange="toggleBerkasMasuk(${x.id}, this)" ${x.is_submitted ? 'checked' : ''}>
+                  <span class="slider"></span>
+                </label>
+                <div class="small fw-bold mt-1 ${x.is_submitted?'text-success':'text-secondary'}">${x.is_submitted?'SUDAH':'BELUM'}</div>
+                `;
+
                 tbody.innerHTML += `
                 <tr class="fade-in">
                     <td class="fw-bold small text-nowrap">
-                        ${x.sekolah}
-                        <div class="mt-1">
-                            <button onclick="cariDiDrive('${x.sekolah}')" class="btn btn-sm btn-warning text-dark py-0 px-2 shadow-sm" style="font-size: 0.7rem;">
-                                <i class="bi bi-search"></i> CARI BERKAS
-                            </button>
+                        <span class="badge bg-secondary me-1" style="font-size:0.7em">${x.tampil}</span> ${x.sekolah}
+                        <div class="mt-1 d-flex gap-1">
+                            <button onclick="cariDiDrive('${x.sekolah}')" class="btn btn-sm btn-warning text-dark py-0 px-2 shadow-sm" style="font-size: 0.65rem;"><i class="bi bi-search"></i> DRIVE</button>
+                            <button onclick="checkAllBerkas(${x.id})" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.65rem;">SET LENGKAP</button>
                         </div>
+                    </td>
+                    <td class="text-center bg-light border-start border-end">
+                        ${toggleHTML}
                     </td>
                     <td><div class="d-flex justify-content-center gap-1">${mkChk('lkbbt','LKB')} ${mkChk('maket','MKT')} ${mkChk('dance','DNC')} ${mkChk('ios','IOS')} ${mkChk('poster','POS')}</div></td>
                     <td><input type="text" id="note_${x.id}" class="form-control form-control-sm" value="${x.v_note||'-'}" placeholder="Catatan..."></td>
@@ -530,6 +538,104 @@
                     </td>
                 </tr>`;
             });
+        }
+
+        function toggleBerkasMasuk(id, el) {
+            const idx = db.findIndex(x => x.id == id);
+            if(idx >= 0) {
+                db[idx].is_submitted = el.checked;
+                renderTableValidasi(); 
+                updateStats();
+                if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'update_submitted', id:id, status: db[idx].is_submitted})});
+            }
+        }
+
+        // --- NEW: SIMPLE PDF DOWNLOAD FOR GROUP ---
+        function downloadRekapSimple() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const list = db.filter(x => x.tingkat === currentTab);
+            
+            // BACKGROUND SORT BY UNDIAN (Tampil), BUT NOT SHOWN
+            list.sort((a, b) => ((a.tampil === '-' ? 999 : parseInt(a.tampil)) - (b.tampil === '-' ? 999 : parseInt(b.tampil))));
+
+            const notSubmitted = list.filter(x => !x.is_submitted);
+            const submitted = list.filter(x => x.is_submitted);
+
+            let finalY = 20;
+
+            // HEADER
+            doc.setFontSize(14);
+            doc.text(`STATUS PENGIRIMAN BERKAS - ${currentTab}`, 105, finalY, { align: "center" });
+            doc.setFontSize(10);
+            doc.text(`Per: ${new Date().toLocaleString('id-ID')}`, 105, finalY + 7, { align: "center" });
+            finalY += 15;
+
+            // TABLE 1: BELUM KIRIM (MERAH)
+            doc.setFontSize(11);
+            doc.setTextColor(220, 38, 38); 
+            doc.text(`BELUM MENYERAHKAN BERKAS (${notSubmitted.length})`, 14, finalY);
+            doc.setTextColor(0,0,0);
+
+            if (notSubmitted.length > 0) {
+                 doc.autoTable({
+                    startY: finalY + 2,
+                    head: [['No', 'Nama Sekolah']], 
+                    body: notSubmitted.map((x, i) => [i + 1, x.sekolah]), // Simple: No, Sekolah
+                    headStyles: { fillColor: [220, 38, 38] },
+                    theme: 'grid',
+                    columnStyles: { 0: { halign: 'center', cellWidth: 15 } }
+                });
+                finalY = doc.lastAutoTable.finalY + 15;
+            } else {
+                doc.setFontSize(10);
+                doc.text("NIHIL (Semua sudah menyerahkan)", 14, finalY + 8);
+                finalY += 20;
+            }
+
+            // TABLE 2: SUDAH KIRIM (HIJAU)
+            doc.setFontSize(11);
+            doc.setTextColor(22, 163, 74); 
+            doc.text(`SUDAH MENYERAHKAN BERKAS (${submitted.length})`, 14, finalY);
+            doc.setTextColor(0,0,0);
+
+            if (submitted.length > 0) {
+                doc.autoTable({
+                    startY: finalY + 2,
+                    head: [['No', 'Nama Sekolah']], 
+                    body: submitted.map((x, i) => [i + 1, x.sekolah]), // Simple: No, Sekolah
+                    headStyles: { fillColor: [22, 163, 74] },
+                    theme: 'grid',
+                    columnStyles: { 0: { halign: 'center', cellWidth: 15 } }
+                });
+            }
+
+            doc.save(`Rekap_Berkas_${currentTab}.pdf`);
+        }
+
+        // --- EXISTING FUNCTIONS ---
+        function checkAllBerkas(id) {
+            ['lkbbt','maket','dance','ios','poster'].forEach(c => {
+                const el = document.getElementById(`${c}_${id}`);
+                if(el) el.checked = true;
+            });
+        }
+
+        function simpanValidasi(id) {
+            const idx = db.findIndex(x => x.id == id);
+            const cols = ['lkbbt','maket','dance','ios','poster'];
+            let complete = true;
+            cols.forEach(c => { const val = document.getElementById(`${c}_${id}`).checked ? 1 : 0; db[idx]['v_'+c] = val; if(!val) complete = false; });
+            db[idx].v_note = document.getElementById(`note_${id}`).value;
+            db[idx].v_status = complete ? 'LENGKAP' : 'BELUM LENGKAP';
+            renderTableValidasi(); updateStats(); toast("Validasi Tersimpan");
+            if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'validate', id:id, ...db[idx], is_submitted: db[idx].is_submitted})});
+        }
+
+        function cariDiDrive(namaSekolah) {
+            const parentID = "1nyDKvIUNTCuU7xuINVjojZ3gVjzZ76GYQ64HeCrwNFgAciJvRK-JD3UN-YBSMlETRzcP7617";
+            const query = `parent:${parentID} "${namaSekolah}"`;
+            window.open(`https://drive.google.com/drive/search?q=${encodeURIComponent(query)}`, '_blank');
         }
 
         function startScanner() {
@@ -575,17 +681,17 @@
             const rowId = `log_${Date.now()}`;
             tbody.insertAdjacentHTML('afterbegin', `<tr id="${rowId}"><td>${now}</td><td class="fw-bold">${nama}</td><td class="status-cell"><span class="badge bg-success">${status}</span></td><td class="text-center"><button class="btn btn-sm btn-outline-danger py-0" onclick="batalAbsen(${id}, '${rowId}')">Batal</button></td></tr>`);
         }
-        
+
         function batalAbsen(id, rowElemId) {
             if(!confirm("Batalkan kehadiran ini?")) return;
             const idx = db.findIndex(x => x.id == id);
             if(idx >= 0) {
-                db[idx].absen = false;
-                renderTableInput(); updateStats();
+                db[idx].absen = false; renderTableInput(); updateStats();
                 document.getElementById(rowElemId).querySelector('.status-cell').innerHTML = '<span class="badge bg-secondary">DIBATALKAN</span>';
                 if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'attendance', id:id, status: false})});
             }
         }
+        
         function resetAbsenHarian() { if(confirm("Hapus semua log tampilan?")) document.getElementById('log-absen-body').innerHTML = ''; }
 
         function tambahPeserta() {
@@ -613,25 +719,19 @@
         document.getElementById('form-peserta').addEventListener('submit', function(e){
             e.preventDefault();
             const idEdit = document.getElementById('in-id-edit').value;
-            const sekolahVal = document.getElementById('in-sekolah').value.toUpperCase();
-            const tingkatVal = document.getElementById('in-tingkat').value;
-            
             const payload = {
-                sekolah: sekolahVal, email: document.getElementById('in-email').value,
+                sekolah: document.getElementById('in-sekolah').value.toUpperCase(), email: document.getElementById('in-email').value,
                 wa: document.getElementById('in-wa').value, b1: document.getElementById('in-b1').value, b2: document.getElementById('in-b2').value
             };
-
             if (idEdit) {
                 const idx = db.findIndex(x => x.id == idEdit);
                 if(idx >= 0) {
-                    Object.assign(db[idx], payload);
-                    toast("Data Diperbarui");
+                    Object.assign(db[idx], payload); toast("Data Diperbarui");
                     if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'update_data', id:idEdit, ...payload})});
                 }
             } else {
-                const newData = { action: 'add', id: Date.now(), tingkat: tingkatVal, tampil:'-', kode:'-', v_status:'BELUM LENGKAP', ...payload };
-                db.push(newData);
-                toast("Data Ditambahkan");
+                const newData = { action: 'add', id: Date.now(), tingkat: document.getElementById('in-tingkat').value, tampil:'-', kode:'-', v_status:'BELUM LENGKAP', is_submitted: false, ...payload };
+                db.push(newData); toast("Data Ditambahkan");
                 if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(newData)});
             }
             closeModal('modal-input'); renderAll();
@@ -639,8 +739,7 @@
 
         function hapusData(id) {
             if(confirm("Yakin hapus data ini selamanya?")) {
-                db = db.filter(x => x.id != id);
-                renderAll();
+                db = db.filter(x => x.id != id); renderAll();
                 if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'delete', id:id})});
             }
         }
@@ -660,171 +759,100 @@
             const idx = db.findIndex(x => x.id == id);
             if (idx >= 0) {
                 db[idx].absen_tm = !db[idx].absen_tm;
-                renderTableInput(); 
-                toast(`${db[idx].sekolah} - ${db[idx].absen_tm ? 'TM OK' : 'TM Batal'}`, "info");
+                renderTableInput(); toast(`${db[idx].sekolah} - TM OK`, "info");
                 if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'update_tm', id:db[idx].id, status: db[idx].absen_tm})});
             }
         }
 
-        function simpanValidasi(id) {
-            const idx = db.findIndex(x => x.id == id);
-            const cols = ['lkbbt','maket','dance','ios','poster'];
-            let complete = true;
-            cols.forEach(c => { const val = document.getElementById(`${c}_${id}`).checked ? 1 : 0; db[idx]['v_'+c] = val; if(!val) complete = false; });
-            db[idx].v_note = document.getElementById(`note_${id}`).value;
-            db[idx].v_status = complete ? 'LENGKAP' : 'BELUM LENGKAP';
-            renderTableValidasi(); updateStats(); toast("Validasi Tersimpan");
-            if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'validate', id:id, ...db[idx]})});
-        }
-        
-        function cariDiDrive(namaSekolah) {
-            const parentID = "1nyDKvIUNTCuU7xuINVjojZ3gVjzZ76GYQ64HeCrwNFgAciJvRK-JD3UN-YBSMlETRzcP7617";
-            const query = `parent:${parentID} "${namaSekolah}"`;
-            window.open(`https://drive.google.com/drive/search?q=${encodeURIComponent(query)}`, '_blank');
-        }
-
+        // --- EXPORT & MISC ---
         function exportPDFList() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
             let list = db.filter(x => x.tingkat === currentTab);
             list.sort((a,b)=> ((a.tampil==='-'?999:parseInt(a.tampil)) - (b.tampil==='-'?999:parseInt(b.tampil))));
             doc.text(`DATA PESERTA ${currentTab}`, 14, 20);
-            doc.autoTable({ startY: 30, head: [['No', 'Sekolah', 'No. Undian', 'Kode Peserta']], body: list.map((x,i) => [i+1, x.sekolah, x.tampil, x.kode]) });
+            doc.autoTable({ startY: 30, head: [['No', 'Sekolah', 'No. Undian', 'Kode']], body: list.map((x,i) => [i+1, x.sekolah, x.tampil, x.kode]) });
             doc.save(`Data_Peserta_${currentTab}.pdf`);
         }
 
         function exportExcel() {
-            const list = db.filter(x => x.tingkat === currentTab);
-            const ws = XLSX.utils.json_to_sheet(list.map((x,i)=>({No:i+1, Sekolah:x.sekolah, Undian:x.tampil, Kode:x.kode, Status:x.v_status})));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Data");
-            XLSX.writeFile(wb, "Data_Peserta.xlsx");
+            const ws = XLSX.utils.json_to_sheet(db.filter(x => x.tingkat === currentTab).map((x,i)=>({No:i+1, Sekolah:x.sekolah, Undian:x.tampil, Kode:x.kode, Status:x.v_status})));
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data"); XLSX.writeFile(wb, "Data_Peserta.xlsx");
         }
 
         function downloadRekapTMExcel() {
             const dataHadir = db.filter(x => x.absen_tm === true);
-            if (dataHadir.length === 0) { alert("Belum ada data TM!"); return; }
             const ws = XLSX.utils.json_to_sheet(dataHadir.map((x, i) => ({ "No": i + 1, "Sekolah": x.sekolah, "Tingkat": x.tingkat, "Kode": x.kode, "Status": "HADIR TM" })));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Rekap TM");
-            XLSX.writeFile(wb, `REKAP_TM_${Date.now()}.xlsx`);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap TM"); XLSX.writeFile(wb, `REKAP_TM_${Date.now()}.xlsx`);
         }
 
         function downloadRekapTMPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
             const dataHadir = db.filter(x => x.absen_tm === true);
-            if (dataHadir.length === 0) { alert("Belum ada data TM!"); return; }
             doc.text("REKAP ABSENSI TECHNICAL MEETING", 105, 20, { align: "center" });
             doc.autoTable({ startY: 30, head: [['No', 'Sekolah', 'Tingkat', 'Kode', 'Status']], body: dataHadir.map((x, i) => [i + 1, x.sekolah, x.tingkat, x.kode, "HADIR"]) });
             doc.save(`REKAP_TM_${Date.now()}.pdf`);
         }
-        
+
         function exportPDFRekap() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
             const list = db.filter(x => x.tingkat === currentTab);
+            list.sort((a, b) => ((a.tampil === '-' ? 999 : parseInt(a.tampil)) - (b.tampil === '-' ? 999 : parseInt(b.tampil))));
             doc.text(`REKAP VALIDASI ${currentTab}`, 14, 20);
-            doc.autoTable({ startY:30, head:[['Sekolah','LKB','MKT','DNC','IOS','POS','Status']], body:list.map(x=>[x.sekolah, x.v_lkbbt?'V':'-', x.v_maket?'V':'-', x.v_dance?'V':'-', x.v_ios?'V':'-', x.v_poster?'V':'-', x.v_status]) });
+            doc.autoTable({ startY:30, head:[['No Undian', 'Sekolah','Trm Berkas','LKB','MKT','DNC','IOS','POS','Status']], body:list.map(x=>[x.tampil, x.sekolah, x.is_submitted?'OK':'-', x.v_lkbbt?'V':'-', x.v_maket?'V':'-', x.v_dance?'V':'-', x.v_ios?'V':'-', x.v_poster?'V':'-', x.v_status]) });
             doc.save('Rekap_Validasi.pdf');
         }
 
         function cetakSurat(id) {
-            const x = db.find(d => d.id == id);
-            if (!x) return;
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const x = db.find(d => d.id == id); if (!x) return;
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
             doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 40, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.text("LEMBAR VALIDASI PESERTA", 105, 20, { align: "center" });
-            doc.setFontSize(10); doc.text("PENTAGON VOL.2 - SCOUT COMPETITION", 105, 28, { align: "center" });
-            doc.setTextColor(0, 0, 0); doc.setFontSize(11);
-            doc.text(`Sekolah : ${x.sekolah}`, 20, 60);
-            doc.text(`Kode    : ${x.kode}`, 20, 68);
-            const color = x.v_status === 'LENGKAP' ? [22, 163, 74] : [220, 38, 38];
-            doc.setTextColor(...color); doc.setFontSize(14);
-            doc.text(x.v_status, 190, 65, { align: "right" });
-            const cek = (v) => v ? "LENGKAP" : "BELUM ADA";
-            doc.autoTable({ startY: 80, head: [['JENIS BERKAS', 'STATUS']], body: [ ["LKBBT", cek(x.v_lkbbt)], ["Maket", cek(x.v_maket)], ["Dance", cek(x.v_dance)], ["IOS", cek(x.v_ios)], ["Poster", cek(x.v_poster)] ], theme: 'grid' });
-            doc.setTextColor(0); doc.setFontSize(10);
-            doc.text(`Catatan: ${x.v_note || '-'}`, 20, doc.lastAutoTable.finalY + 10);
+            doc.setTextColor(0, 0, 0); doc.setFontSize(11); doc.text(`Sekolah : ${x.sekolah}`, 20, 60); doc.text(`Kode : ${x.kode}`, 20, 68);
+            doc.autoTable({ startY: 80, head: [['JENIS BERKAS', 'STATUS']], body: [ ["PENGIRIMAN BERKAS", x.is_submitted ? "SUDAH DITERIMA" : "BELUM DITERIMA"], ["LKBBT", x.v_lkbbt?"LENGKAP":"BELUM"], ["Maket", x.v_maket?"LENGKAP":"BELUM"], ["Dance", x.v_dance?"LENGKAP":"BELUM"], ["IOS", x.v_ios?"LENGKAP":"BELUM"], ["Poster", x.v_poster?"LENGKAP":"BELUM"] ] });
             doc.save(`Validasi_${x.sekolah}.pdf`);
         }
 
         function showQR(id) {
-            const x = db.find(d => d.id == id);
-            if(!x || x.kode === '-') { alert("Belum ada kode!"); return; }
+            const x = db.find(d => d.id == id); if(!x || x.kode === '-') return;
             document.getElementById('qr-title').innerText = x.sekolah;
             document.getElementById('qr-sub').innerText = x.kode;
             const c = document.getElementById('qr-display'); c.innerHTML = '';
-            new QRCode(c, { text: x.kode, width: 200, height: 200 });
-            openModal('modal-show-qr');
-        }
-        function downloadQR() {
-            const img = document.querySelector('#qr-display img');
-            if(img) { const a = document.createElement('a'); a.download = 'QR.png'; a.href = img.src; a.click(); }
+            new QRCode(c, { text: x.kode, width: 200, height: 200 }); openModal('modal-show-qr');
         }
 
-        // --- WA MANUAL LOGIC (DIPERBAIKI) ---
         function kirimInfoPeserta(id) {
-            const x = db.find(d => d.id == id);
-            if(!x) return;
-            toast("Membuat Kartu & Membuka Menu...", "info");
-            
-            // 1. Generate Image (Canvas Logic)
+            const x = db.find(d => d.id == id); if(!x) return;
             const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 1000; const ctx = canvas.getContext('2d');
-            const gradient = ctx.createLinearGradient(0, 0, 0, 1000); gradient.addColorStop(0, "#0f172a"); gradient.addColorStop(1, "#1e293b"); ctx.fillStyle = gradient; ctx.fillRect(0, 0, 800, 1000);
-            ctx.beginPath(); ctx.arc(400, -100, 600, 0, 2 * Math.PI); ctx.fillStyle = "rgba(59, 130, 246, 0.1)"; ctx.fill();
+            ctx.fillStyle = "#0f172a"; ctx.fillRect(0, 0, 800, 1000);
             ctx.fillStyle = "#ffffff"; ctx.font = "bold 50px Arial"; ctx.textAlign = "center"; ctx.fillText("PENTAGON 5 VOL.2 2026", 400, 100);
-            ctx.fillStyle = "#94a3b8"; ctx.font = "30px Arial"; ctx.fillText("KARTU ABSENSI BINDAMPING", 400, 150);
-            ctx.fillStyle = "#facc15"; let fontSize = 45; if(x.sekolah.length > 20) fontSize = 35; ctx.font = `bold ${fontSize}px Arial`; ctx.fillText(x.sekolah, 400, 250); 
-            let tempDiv = document.createElement('div'); new QRCode(tempDiv, { text: x.kode, width: 400, height: 400, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+            ctx.fillStyle = "#facc15"; ctx.font = "bold 40px Arial"; ctx.fillText(x.sekolah, 400, 250);
+            let tempDiv = document.createElement('div'); new QRCode(tempDiv, { text: x.kode, width: 400, height: 400 });
             setTimeout(() => {
-                const qrCanvas = tempDiv.querySelector('canvas'); ctx.fillStyle = "white"; ctx.fillRect(175, 300, 450, 450); if(qrCanvas) ctx.drawImage(qrCanvas, 200, 325, 400, 400);
-                ctx.fillStyle = "white"; ctx.font = "30px Arial"; ctx.fillText("NOMOR PESERTA:", 400, 820); ctx.fillStyle = "#3b82f6"; ctx.font = "bold 60px Monospace"; ctx.fillText(x.kode, 400, 890); ctx.fillStyle = "white"; ctx.font = "bold 25px Arial"; ctx.fillText(`NO. TAMPIL: ${x.tampil}`, 400, 950);
-                
-                // 2. Download Image
-                const imgUrl = canvas.toDataURL("image/png"); const link = document.createElement('a'); link.download = `ABSENSI BINDAMPING_${x.sekolah}.png`; link.href = imgUrl; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-                
-                // 3. Open Modal Manual
-                const msg = `*OFFICIAL PENTAGON 5 VOL.2*\n\nHalo, *${x.sekolah}*!\n\nBerikut kami lampirkan *KARTU ABSENSI BINDAMPING*.\n\nNomor Peserta: ${x.kode}\nNo Tampil: ${x.tampil}\n\nMohon simpan kartu ini untuk absensi saat hari H.`;
-                document.getElementById('wa-num').value = cleanNum(x.wa);
-                document.getElementById('wa-msg').value = msg;
-                document.getElementById('msg-img-info').style.display = 'block'; // Show Alert Gambar
-                document.getElementById('btn-open-wa-manual').href = `https://api.whatsapp.com/send?phone=${cleanNum(x.wa)}`;
-                
-                openModal('modal-wa');
-
+                const qrCanvas = tempDiv.querySelector('canvas'); 
+                if(qrCanvas) ctx.drawImage(qrCanvas, 200, 325, 400, 400);
+                ctx.fillStyle = "white"; ctx.font = "bold 60px Monospace"; ctx.fillText(x.kode, 400, 890);
+                const imgUrl = canvas.toDataURL("image/png"); const link = document.createElement('a'); link.download = `ABSENSI_${x.sekolah}.png`; link.href = imgUrl; link.click();
+                setupWA(id);
             }, 500);
         }
 
         function setupWA(id) {
             const x = db.find(d => d.id == id);
-            const msg = `*VALIDASI BERKAS PENTAGON 5*\n\nHalo ${x.sekolah},\n\nStatus berkas Anda saat ini: *${x.v_status}*.\nCatatan Panitia: ${x.v_note||'-'}\n\nMohon segera dilengkapi jika ada kekurangan. Terima kasih.`;
-            document.getElementById('wa-num').value = cleanNum(x.wa);
+            const msg = `*PENTAGON 5 VOL.2*\n\nHalo ${x.sekolah},\nStatus berkas: *${x.v_status}*.\nCatatan: ${x.v_note||'-'}`;
+            document.getElementById('wa-num').value = String(x.wa).replace(/\D/g,'').replace(/^0/,'62').replace(/^8/,'628');
             document.getElementById('wa-msg').value = msg;
-            document.getElementById('msg-img-info').style.display = 'none'; // Hide Alert Gambar
-            document.getElementById('btn-open-wa-manual').href = `https://api.whatsapp.com/send?phone=${cleanNum(x.wa)}`;
+            document.getElementById('btn-open-wa-manual').href = `https://api.whatsapp.com/send?phone=${document.getElementById('wa-num').value}`;
             openModal('modal-wa');
         }
 
         function copyInput(id) {
-            const copyText = document.getElementById(id);
-            copyText.select();
-            copyText.setSelectionRange(0, 99999); // Untuk Mobile
-            navigator.clipboard.writeText(copyText.value);
-            toast("Berhasil disalin!", "success");
+            const el = document.getElementById(id); el.select(); navigator.clipboard.writeText(el.value); toast("Disalin!");
         }
 
-        function cleanNum(n) { return String(n).replace(/\D/g,'').replace(/^0/,'62').replace(/^8/,'628'); }
-        
         function toast(msg, type='success') { 
-            const box = document.getElementById('toast-box');
-            const el = document.createElement('div');
-            el.className = 'toast-item';
-            el.style.borderLeftColor = type==='success'?'#22c55e':(type==='danger'?'#ef4444':'#3b82f6');
-            el.innerHTML = `<b>${msg}</b>`;
-            box.appendChild(el);
-            setTimeout(()=>el.remove(), 3000);
+            const box = document.getElementById('toast-box'); const el = document.createElement('div');
+            el.className = 'toast-item'; el.style.borderLeftColor = type==='success'?'#22c55e':'#ef4444';
+            el.innerHTML = `<b>${msg}</b>`; box.appendChild(el); setTimeout(()=>el.remove(), 3000);
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
