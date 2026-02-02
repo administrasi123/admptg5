@@ -167,7 +167,10 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-8">
-                        <input type="text" id="cari-sekolah" class="form-control" placeholder="Cari Nama Sekolah / Kode..." onkeyup="renderAll()">
+                        <div class="input-group">
+                            <input type="text" id="cari-sekolah" class="form-control" placeholder="Cari Nama Sekolah / Kode..." onkeyup="renderAll()">
+                            <button class="btn btn-warning fw-bold text-white" onclick="rapikanUrutanConfirm()" title="Rapikan Nomor Urut"><i class="bi bi-sort-numeric-down"></i> RAPIKAN NO. URUT</button>
+                        </div>
                     </div>
                 </div>
 
@@ -386,7 +389,7 @@
                     db.forEach(x => { 
                         if(typeof x.absen === 'undefined') x.absen = false;
                         if(typeof x.absen_tm === 'undefined') x.absen_tm = false;
-                        if(typeof x.is_submitted === 'undefined') x.is_submitted = false; // NEW FIELD
+                        if(typeof x.is_submitted === 'undefined') x.is_submitted = false; 
                     });
                     renderAll();
                     if(sessionStorage.getItem('ptg_login') === 'true') toast("Data Terbaru Dimuat");
@@ -435,7 +438,7 @@
             const list = db.filter(x => x.tingkat === currentTab);
             document.getElementById('st-total').innerText = list.length;
             document.getElementById('st-com').innerText = list.filter(x => x.v_status === 'LENGKAP').length;
-            document.getElementById('st-submit').innerText = list.filter(x => x.is_submitted).length; // UPDATE STATS
+            document.getElementById('st-submit').innerText = list.filter(x => x.is_submitted).length; 
             document.getElementById('st-absen').innerText = list.filter(x => x.absen).length;
         }
 
@@ -448,9 +451,10 @@
                 (!hideAbsen || !x.absen) && 
                 (x.sekolah.toUpperCase().includes(key) || (x.kode && x.kode.toUpperCase().includes(key))));
             
+            // LOGIKA SORTING LEBIH KETAT
             list.sort((a, b) => {
-                const valA = (a.tampil === '-' || !a.tampil) ? 999 : parseInt(a.tampil);
-                const valB = (b.tampil === '-' || !b.tampil) ? 999 : parseInt(b.tampil);
+                const valA = (a.tampil === '-' || !a.tampil) ? 9999 : parseInt(a.tampil);
+                const valB = (b.tampil === '-' || !b.tampil) ? 9999 : parseInt(b.tampil);
                 return valA - valB;
             });
 
@@ -483,7 +487,6 @@
             });
         }
 
-        // --- UPDATED: RENDER TABLE VALIDASI DENGAN TOGGLE TERIMA BERKAS ---
         function renderTableValidasi() {
             const tbody = document.getElementById('body-validasi'); 
             tbody.innerHTML = '';
@@ -491,9 +494,10 @@
             const searchKey = document.getElementById('cari-validasi').value.toUpperCase();
             let list = db.filter(x => x.tingkat === currentTab && x.sekolah.toUpperCase().includes(searchKey));
             
+            // SORT VALIDASI JUGA KETAT
             list.sort((a, b) => {
-                const valA = (a.tampil === '-' || !a.tampil) ? 999 : parseInt(a.tampil);
-                const valB = (b.tampil === '-' || !b.tampil) ? 999 : parseInt(b.tampil);
+                const valA = (a.tampil === '-' || !a.tampil) ? 9999 : parseInt(a.tampil);
+                const valB = (b.tampil === '-' || !b.tampil) ? 9999 : parseInt(b.tampil);
                 return valA - valB;
             });
 
@@ -550,13 +554,11 @@
             }
         }
 
-        // --- NEW: SIMPLE PDF DOWNLOAD FOR GROUP ---
         function downloadRekapSimple() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const list = db.filter(x => x.tingkat === currentTab);
             
-            // BACKGROUND SORT BY UNDIAN (Tampil), BUT NOT SHOWN
             list.sort((a, b) => ((a.tampil === '-' ? 999 : parseInt(a.tampil)) - (b.tampil === '-' ? 999 : parseInt(b.tampil))));
 
             const notSubmitted = list.filter(x => !x.is_submitted);
@@ -564,14 +566,12 @@
 
             let finalY = 20;
 
-            // HEADER
             doc.setFontSize(14);
             doc.text(`STATUS PENGIRIMAN BERKAS - ${currentTab}`, 105, finalY, { align: "center" });
             doc.setFontSize(10);
             doc.text(`Per: ${new Date().toLocaleString('id-ID')}`, 105, finalY + 7, { align: "center" });
             finalY += 15;
 
-            // TABLE 1: BELUM KIRIM (MERAH)
             doc.setFontSize(11);
             doc.setTextColor(220, 38, 38); 
             doc.text(`BELUM MENYERAHKAN BERKAS (${notSubmitted.length})`, 14, finalY);
@@ -581,7 +581,7 @@
                  doc.autoTable({
                     startY: finalY + 2,
                     head: [['No', 'Nama Sekolah']], 
-                    body: notSubmitted.map((x, i) => [i + 1, x.sekolah]), // Simple: No, Sekolah
+                    body: notSubmitted.map((x, i) => [i + 1, x.sekolah]), 
                     headStyles: { fillColor: [220, 38, 38] },
                     theme: 'grid',
                     columnStyles: { 0: { halign: 'center', cellWidth: 15 } }
@@ -593,7 +593,6 @@
                 finalY += 20;
             }
 
-            // TABLE 2: SUDAH KIRIM (HIJAU)
             doc.setFontSize(11);
             doc.setTextColor(22, 163, 74); 
             doc.text(`SUDAH MENYERAHKAN BERKAS (${submitted.length})`, 14, finalY);
@@ -603,7 +602,7 @@
                 doc.autoTable({
                     startY: finalY + 2,
                     head: [['No', 'Nama Sekolah']], 
-                    body: submitted.map((x, i) => [i + 1, x.sekolah]), // Simple: No, Sekolah
+                    body: submitted.map((x, i) => [i + 1, x.sekolah]), 
                     headStyles: { fillColor: [22, 163, 74] },
                     theme: 'grid',
                     columnStyles: { 0: { halign: 'center', cellWidth: 15 } }
@@ -613,7 +612,6 @@
             doc.save(`Rekap_Berkas_${currentTab}.pdf`);
         }
 
-        // --- EXISTING FUNCTIONS ---
         function checkAllBerkas(id) {
             ['lkbbt','maket','dance','ios','poster'].forEach(c => {
                 const el = document.getElementById(`${c}_${id}`);
@@ -737,23 +735,110 @@
             closeModal('modal-input'); renderAll();
         });
 
+        // --- FUNGSI BARU: HAPUS DAN OTOMATIS RAPIKAN (RE-INDEX) ---
         function hapusData(id) {
-            if(confirm("Yakin hapus data ini selamanya?")) {
-                db = db.filter(x => x.id != id); renderAll();
-                if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'delete', id:id})});
+            if(!confirm("Yakin hapus data ini? Data lain akan otomatis diurutkan ulang.")) return;
+
+            db = db.filter(x => x.id != id);
+
+            if(!API_URL.includes("GANTI")) {
+                fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'delete', id:id})});
+            }
+
+            // OTOMATIS RAPIKAN SETELAH HAPUS
+            rapikanUrutan();
+            toast("Data dihapus & urutan dirapikan.", "success");
+        }
+
+        // --- FUNGSI GANTI NOMOR URUT MANUAL ---
+        function editUndian(id) {
+            const dataCurrent = db.find(x => x.id == id);
+            if (!dataCurrent) return;
+
+            let valStr = prompt(`Ubah No Tampil untuk ${dataCurrent.sekolah}.\n(Jika nomor bentrok, nomor lama akan otomatis tergeser +1)`, dataCurrent.tampil !== '-' ? dataCurrent.tampil : '');
+            
+            if (valStr === null) return; 
+            if (valStr.trim() === "") return; 
+            
+            const newVal = parseInt(valStr);
+            if (isNaN(newVal)) {
+                alert("Harap masukkan angka yang valid!");
+                return;
+            }
+
+            const tingkat = dataCurrent.tingkat;
+
+            // Logika Geser Bentrok
+            function geserNomor(nomorCek) {
+                let bentrokIdx = db.findIndex(x => x.tingkat === tingkat && parseInt(x.tampil) === nomorCek && x.id !== id);
+                if (bentrokIdx !== -1) {
+                    geserNomor(nomorCek + 1); 
+                    const nextNum = nomorCek + 1;
+                    db[bentrokIdx].tampil = nextNum.toString();
+                    db[bentrokIdx].kode = generateKode(db[bentrokIdx].tingkat, nextNum.toString());
+                    simpanKeServer(db[bentrokIdx]);
+                }
+            }
+
+            geserNomor(newVal);
+
+            const idx = db.findIndex(x => x.id == id);
+            db[idx].tampil = newVal.toString();
+            db[idx].kode = generateKode(db[idx].tingkat, newVal.toString());
+
+            simpanKeServer(db[idx]);
+            renderAll();
+            toast(`Berhasil ubah nomor. Klik 'RAPIKAN NO. URUT' jika ada yang bolong.`, "info");
+        }
+
+        // --- FUNGSI BARU: RAPIKAN URUTAN (RE-INDEX 1..N) ---
+        function rapikanUrutanConfirm() {
+            if(confirm("Yakin ingin merapikan nomor urut? \nSemua peserta akan diurutkan ulang dari 1 sampai akhir berdasarkan urutan saat ini.")) {
+                rapikanUrutan();
+                toast("Nomor urut berhasil dirapikan!", "success");
             }
         }
 
-        function editUndian(id) {
-            const val = prompt("Masukkan No Tampil Baru:");
-            if(val) {
-                const idx = db.findIndex(x => x.id == id);
-                db[idx].tampil = val;
-                db[idx].kode = `PTG-${db[idx].tingkat==='SMP'?'G':'T'}-${val.padStart(3,'0')}`;
-                renderAll();
-                if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'edit', id:id, tampil:val, kode:db[idx].kode})});
+        function rapikanUrutan() {
+            // Ambil hanya peserta tingkat aktif yang punya nomor
+            let list = db.filter(x => x.tingkat === currentTab && x.tampil !== '-' && x.tampil);
+            
+            // Urutkan berdasarkan nomor tampil saat ini (biar urutan relatif terjaga)
+            list.sort((a,b) => parseInt(a.tampil) - parseInt(b.tampil));
+
+            // Assign ulang 1, 2, 3...
+            list.forEach((item, index) => {
+                const newNum = index + 1;
+                if (parseInt(item.tampil) !== newNum) {
+                    item.tampil = newNum.toString();
+                    item.kode = generateKode(item.tingkat, item.tampil);
+                    simpanKeServer(item); 
+                }
+            });
+            renderAll();
+        }
+
+        // Helper: Generate Kode
+        function generateKode(tingkat, numStr) {
+            return `PTG-${tingkat === 'SMP' ? 'G' : 'T'}-${numStr.padStart(3, '0')}`;
+        }
+
+        // Helper: Simpan ke Server
+        function simpanKeServer(item) {
+            if (!API_URL.includes("GANTI")) {
+                fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: 'edit',
+                        id: item.id,
+                        tampil: item.tampil,
+                        kode: item.kode
+                    })
+                });
             }
         }
+        // ------------------------------------------------------------------
 
         function toggleTM(id) {
             const idx = db.findIndex(x => x.id == id);
@@ -764,11 +849,10 @@
             }
         }
 
-        // --- EXPORT & MISC ---
         function exportPDFList() {
             const { jsPDF } = window.jspdf; const doc = new jsPDF();
             let list = db.filter(x => x.tingkat === currentTab);
-            list.sort((a,b)=> ((a.tampil==='-'?999:parseInt(a.tampil)) - (b.tampil==='-'?999:parseInt(b.tampil))));
+            list.sort((a,b)=> ((a.tampil==='-'?9999:parseInt(a.tampil)) - (b.tampil==='-'?9999:parseInt(b.tampil))));
             doc.text(`DATA PESERTA ${currentTab}`, 14, 20);
             doc.autoTable({ startY: 30, head: [['No', 'Sekolah', 'No. Undian', 'Kode']], body: list.map((x,i) => [i+1, x.sekolah, x.tampil, x.kode]) });
             doc.save(`Data_Peserta_${currentTab}.pdf`);
