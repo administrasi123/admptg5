@@ -328,7 +328,6 @@
             <button onclick="copyInput('wa-msg')" class="btn btn-success w-100 fw-bold mb-2"><i class="bi bi-clipboard-check"></i> SALIN PESAN</button>
             <hr>
             <a id="btn-open-wa-manual" href="#" target="_blank" class="btn btn-outline-dark w-100 btn-sm"><i class="bi bi-box-arrow-up-right"></i> Buka WhatsApp Web/App</a>
-            <div id="msg-img-info" class="alert alert-info small mt-3" style="display:none;"><i class="bi bi-image"></i> <b>Gambar ID Card telah didownload.</b><br>Silakan lampirkan gambar tersebut secara manual saat mengirim pesan di WhatsApp.</div>
         </div>
     </div>
 
@@ -442,8 +441,9 @@
             document.getElementById('st-absen').innerText = list.filter(x => x.absen).length;
         }
 
+        // --- OPTIMIZED RENDER TABLE INPUT ---
         function renderTableInput() {
-            const tbody = document.getElementById('body-input'); tbody.innerHTML = '';
+            const tbody = document.getElementById('body-input');
             const key = document.getElementById('cari-sekolah').value.toUpperCase();
             const hideAbsen = document.getElementById('chk-hide-absen').checked;
             
@@ -451,7 +451,6 @@
                 (!hideAbsen || !x.absen) && 
                 (x.sekolah.toUpperCase().includes(key) || (x.kode && x.kode.toUpperCase().includes(key))));
             
-            // LOGIKA SORTING LEBIH KETAT
             list.sort((a, b) => {
                 const valA = (a.tampil === '-' || !a.tampil) ? 9999 : parseInt(a.tampil);
                 const valB = (b.tampil === '-' || !b.tampil) ? 9999 : parseInt(b.tampil);
@@ -463,14 +462,14 @@
                 return;
             }
 
-            list.forEach(x => {
+            const htmlRows = list.map(x => {
                 const rowClass = x.absen ? 'table-success fade-in' : 'fade-in';
                 const statusBadge = x.absen ? '<span class="badge bg-success"><i class="bi bi-check"></i> HADIR</span>' : '';
                 let btnTMClass = x.absen_tm ? 'btn-primary' : 'btn-outline-secondary';
                 let btnTMIcon = x.absen_tm ? '<i class="bi bi-check-lg"></i>' : 'TM';
                 let labelTM = x.absen_tm ? '<span class="badge bg-primary ms-1" style="font-size:0.6rem;">TM OK</span>' : '';
 
-                tbody.innerHTML += `
+                return `
                 <tr class="${rowClass}">
                     <td class="fw-bold">${x.sekolah} <br>${statusBadge} ${labelTM}</td>
                     <td class="text-center"><span class="badge ${x.tampil==='-'?'bg-secondary':'bg-primary'} fs-6">${x.tampil}</span></td>
@@ -484,17 +483,18 @@
                         <button onclick="hapusData(${x.id})" class="btn btn-sm btn-outline-danger rounded-circle"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>`;
-            });
+            }).join('');
+
+            tbody.innerHTML = htmlRows;
         }
 
+        // --- OPTIMIZED RENDER TABLE VALIDASI ---
         function renderTableValidasi() {
             const tbody = document.getElementById('body-validasi'); 
-            tbody.innerHTML = '';
-            
             const searchKey = document.getElementById('cari-validasi').value.toUpperCase();
+            
             let list = db.filter(x => x.tingkat === currentTab && x.sekolah.toUpperCase().includes(searchKey));
             
-            // SORT VALIDASI JUGA KETAT
             list.sort((a, b) => {
                 const valA = (a.tampil === '-' || !a.tampil) ? 9999 : parseInt(a.tampil);
                 const valB = (b.tampil === '-' || !b.tampil) ? 9999 : parseInt(b.tampil);
@@ -506,7 +506,7 @@
                 return;
             }
 
-            list.forEach(x => {
+            const htmlRows = list.map(x => {
                 const badge = x.v_status === 'LENGKAP' ? 'bg-success' : 'bg-danger';
                 const mkChk = (col, label) => `<div class="chk-container"><div class="chk-title">${label}</div><input type="checkbox" id="${col}_${x.id}" class="custom-chk" ${x['v_'+col]?'checked':''}><label for="${col}_${x.id}" class="chk-label"><i class="bi bi-check-lg"></i></label></div>`;
                 
@@ -518,7 +518,7 @@
                 <div class="small fw-bold mt-1 ${x.is_submitted?'text-success':'text-secondary'}">${x.is_submitted?'SUDAH':'BELUM'}</div>
                 `;
 
-                tbody.innerHTML += `
+                return `
                 <tr class="fade-in">
                     <td class="fw-bold small text-nowrap">
                         <span class="badge bg-secondary me-1" style="font-size:0.7em">${x.tampil}</span> ${x.sekolah}
@@ -541,7 +541,9 @@
                         </div>
                     </td>
                 </tr>`;
-            });
+            }).join('');
+
+            tbody.innerHTML = htmlRows;
         }
 
         function toggleBerkasMasuk(id, el) {
@@ -735,22 +737,16 @@
             closeModal('modal-input'); renderAll();
         });
 
-        // --- FUNGSI BARU: HAPUS DAN OTOMATIS RAPIKAN (RE-INDEX) ---
         function hapusData(id) {
             if(!confirm("Yakin hapus data ini? Data lain akan otomatis diurutkan ulang.")) return;
-
             db = db.filter(x => x.id != id);
-
             if(!API_URL.includes("GANTI")) {
                 fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'delete', id:id})});
             }
-
-            // OTOMATIS RAPIKAN SETELAH HAPUS
             rapikanUrutan();
             toast("Data dihapus & urutan dirapikan.", "success");
         }
 
-        // --- FUNGSI GANTI NOMOR URUT MANUAL ---
         function editUndian(id) {
             const dataCurrent = db.find(x => x.id == id);
             if (!dataCurrent) return;
@@ -768,7 +764,6 @@
 
             const tingkat = dataCurrent.tingkat;
 
-            // Logika Geser Bentrok
             function geserNomor(nomorCek) {
                 let bentrokIdx = db.findIndex(x => x.tingkat === tingkat && parseInt(x.tampil) === nomorCek && x.id !== id);
                 if (bentrokIdx !== -1) {
@@ -791,7 +786,6 @@
             toast(`Berhasil ubah nomor. Klik 'RAPIKAN NO. URUT' jika ada yang bolong.`, "info");
         }
 
-        // --- FUNGSI BARU: RAPIKAN URUTAN (RE-INDEX 1..N) ---
         function rapikanUrutanConfirm() {
             if(confirm("Yakin ingin merapikan nomor urut? \nSemua peserta akan diurutkan ulang dari 1 sampai akhir berdasarkan urutan saat ini.")) {
                 rapikanUrutan();
@@ -800,13 +794,9 @@
         }
 
         function rapikanUrutan() {
-            // Ambil hanya peserta tingkat aktif yang punya nomor
             let list = db.filter(x => x.tingkat === currentTab && x.tampil !== '-' && x.tampil);
-            
-            // Urutkan berdasarkan nomor tampil saat ini (biar urutan relatif terjaga)
             list.sort((a,b) => parseInt(a.tampil) - parseInt(b.tampil));
 
-            // Assign ulang 1, 2, 3...
             list.forEach((item, index) => {
                 const newNum = index + 1;
                 if (parseInt(item.tampil) !== newNum) {
@@ -818,12 +808,10 @@
             renderAll();
         }
 
-        // Helper: Generate Kode
         function generateKode(tingkat, numStr) {
             return `PTG-${tingkat === 'SMP' ? 'G' : 'T'}-${numStr.padStart(3, '0')}`;
         }
 
-        // Helper: Simpan ke Server
         function simpanKeServer(item) {
             if (!API_URL.includes("GANTI")) {
                 fetch(API_URL, {
@@ -838,7 +826,6 @@
                 });
             }
         }
-        // ------------------------------------------------------------------
 
         function toggleTM(id) {
             const idx = db.findIndex(x => x.id == id);
@@ -922,10 +909,50 @@
 
         function setupWA(id) {
             const x = db.find(d => d.id == id);
-            const msg = `*PENTAGON 5 VOL.2*\n\nHalo ${x.sekolah},\nStatus berkas: *${x.v_status}*.\nCatatan: ${x.v_note||'-'}`;
-            document.getElementById('wa-num').value = String(x.wa).replace(/\D/g,'').replace(/^0/,'62').replace(/^8/,'628');
+            if (!x) return;
+
+            let phone = String(x.wa).replace(/\D/g,'');
+            if(phone.startsWith('0')) phone = '62' + phone.slice(1);
+            if(phone.startsWith('8')) phone = '628' + phone.slice(1);
+
+            let msg = "";
+
+            if (x.v_status === 'LENGKAP') {
+                msg = `✅ *VALIDASI BERKAS SUKSES*\n` +
+                      `*PENTAGON 5 VOL.2 2026*\n\n` +
+                      `Halo Official *${x.sekolah}*,\n\n` +
+                      `Selamat! Kami informasikan bahwa seluruh berkas administrasi tim kakak telah diperiksa dan dinyatakan:\n` +
+                      `✨ *LENGKAP* ✨\n\n` +
+                      `Sampai jumpa di hari perlombaan! 🔥\n\n` +
+                      `_— Admin Pentagon 5_`;
+            } else {
+                let kekurangan = [];
+                if(!x.v_lkbbt) kekurangan.push("- LKBBT");
+                if(!x.v_maket) kekurangan.push("- Maket");
+                if(!x.v_dance) kekurangan.push("- Dance");
+                if(!x.v_ios) kekurangan.push("- IOS");
+                if(!x.v_poster) kekurangan.push("- Poster");
+                
+                let listKurang = kekurangan.length > 0 ? kekurangan.join("\n") : "";
+                let catatanTambahan = x.v_note ? `\n\n📝 *Catatan Panitia:*\n"${x.v_note}"` : "";
+
+                msg = `⚠️ *INFO REVISI BERKAS*\n` +
+                      `*PENTAGON 5 VOL.2 2026*\n\n` +
+                      `Halo Official *${x.sekolah}*,\n` +
+                      `Berdasarkan pemeriksaan panitia, status berkas tim kakak saat ini:\n` +
+                      `❌ *BELUM LENGKAP / PERLU REVISI*\n\n` +
+                      `Mohon cek kelengkapan berikut:\n` +
+                      `${listKurang}` + 
+                      `${catatanTambahan}\n\n` +
+                      `Mohon segera dilengkapi ya kak. Terima kasih! 🙏\n\n` +
+                      `_— Admin Pentagon 5_`;
+            }
+
+            document.getElementById('wa-num').value = phone;
             document.getElementById('wa-msg').value = msg;
-            document.getElementById('btn-open-wa-manual').href = `https://api.whatsapp.com/send?phone=${document.getElementById('wa-num').value}`;
+            
+            document.getElementById('btn-open-wa-manual').href = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+            
             openModal('modal-wa');
         }
 
