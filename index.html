@@ -536,7 +536,7 @@
                     <td class="text-center text-nowrap">
                         <div class="btn-group">
                             <button onclick="simpanValidasi(${x.id})" class="btn btn-sm btn-primary" title="Simpan"><i class="bi bi-floppy"></i></button>
-                            <button onclick="setupWA(${x.id})" class="btn btn-sm btn-success" title="WA"><i class="bi bi-whatsapp"></i></button>
+                            <button onclick="setupWA(${x.id}, 'validation')" class="btn btn-sm btn-success" title="WA"><i class="bi bi-whatsapp"></i></button>
                             <button onclick="cetakSurat(${x.id})" class="btn btn-sm btn-danger" title="Print"><i class="bi bi-file-pdf"></i></button>
                         </div>
                     </td>
@@ -903,11 +903,12 @@
                 if(qrCanvas) ctx.drawImage(qrCanvas, 200, 325, 400, 400);
                 ctx.fillStyle = "white"; ctx.font = "bold 60px Monospace"; ctx.fillText(x.kode, 400, 890);
                 const imgUrl = canvas.toDataURL("image/png"); const link = document.createElement('a'); link.download = `ABSENSI_${x.sekolah}.png`; link.href = imgUrl; link.click();
-                setupWA(id);
+                setupWA(id, 'qr'); // MENGGUNAKAN MODE 'qr' AGAR PESAN KEMBALI KE ORIGINAL
             }, 500);
         }
 
-        function setupWA(id) {
+        // --- FUNGSI UTAMA WA YANG SUDAH DIMODIFIKASI ---
+        function setupWA(id, type = 'qr') {
             const x = db.find(d => d.id == id);
             if (!x) return;
 
@@ -917,35 +918,46 @@
 
             let msg = "";
 
-            if (x.v_status === 'LENGKAP') {
-                msg = `✅ *VALIDASI BERKAS SUKSES*\n` +
-                      `*PENTAGON 5 VOL.2 2026*\n\n` +
-                      `Halo Official *${x.sekolah}*,\n\n` +
-                      `Selamat! Kami informasikan bahwa seluruh berkas administrasi tim kakak telah diperiksa dan dinyatakan:\n` +
-                      `✨ *LENGKAP* ✨\n\n` +
-                      `Sampai jumpa di hari perlombaan! 🔥\n\n` +
-                      `_— Admin Pentagon 5_`;
-            } else {
-                let kekurangan = [];
-                if(!x.v_lkbbt) kekurangan.push("- LKBBT");
-                if(!x.v_maket) kekurangan.push("- Maket");
-                if(!x.v_dance) kekurangan.push("- Dance");
-                if(!x.v_ios) kekurangan.push("- IOS");
-                if(!x.v_poster) kekurangan.push("- Poster");
-                
-                let listKurang = kekurangan.length > 0 ? kekurangan.join("\n") : "";
-                let catatanTambahan = x.v_note ? `\n\n📝 *Catatan Panitia:*\n"${x.v_note}"` : "";
+            if (type === 'validation') {
+                // --- PESAN KHUSUS VALIDASI (BARU) ---
+                if (x.v_status === 'LENGKAP') {
+                    msg = `✅ *VALIDASI BERKAS SUKSES*\n` +
+                          `*PENTAGON 5 VOL.2 2026*\n\n` +
+                          `Halo Official *${x.sekolah}*,\n\n` +
+                          `Selamat! Kami informasikan bahwa seluruh berkas administrasi tim kakak telah diperiksa dan dinyatakan:\n` +
+                          `✨ *LENGKAP (VERIFIED)* ✨\n\n` +
+                          `Sampai jumpa di Technical Meeting dan hari perlombaan! Siapkan performa terbaikmu! 🔥\n\n` +
+                          `_— Admin Pentagon 5_`;
+                } else {
+                    let kekurangan = [];
+                    if(!x.v_lkbbt) kekurangan.push("- LKBBT");
+                    if(!x.v_maket) kekurangan.push("- Maket");
+                    if(!x.v_dance) kekurangan.push("- Dance");
+                    if(!x.v_ios) kekurangan.push("- IOS");
+                    if(!x.v_poster) kekurangan.push("- Poster");
+                    
+                    let listKurang = kekurangan.length > 0 ? kekurangan.join("\n") : "";
+                    let catatanTambahan = x.v_note ? `\n\n📝 *Catatan Panitia:*\n"${x.v_note}"` : "";
 
-                msg = `⚠️ *INFO REVISI BERKAS*\n` +
-                      `*PENTAGON 5 VOL.2 2026*\n\n` +
+                    msg = `⚠️ *INFO REVISI BERKAS*\n` +
+                          `*PENTAGON 5 VOL.2 2026*\n\n` +
+                          `Halo Official *${x.sekolah}*,\n` +
+                          `Berdasarkan pemeriksaan panitia, status berkas tim kakak saat ini:\n` +
+                          `❌ *BELUM LENGKAP / PERLU REVISI*\n\n` +
+                          `Mohon cek kelengkapan berikut:\n` +
+                          `${listKurang}` + 
+                          `${catatanTambahan}\n\n` +
+                          `Mohon segera dilengkapi ya kak. Terima kasih! 🙏\n\n` +
+                          `_— Admin Pentagon 5_`;
+                }
+            } else {
+                // --- PESAN ORIGINAL (SESUAI PERMINTAAN) ---
+                msg = `*PENTAGON 5 VOL.2 2026*\n\n` +
                       `Halo Official *${x.sekolah}*,\n` +
-                      `Berdasarkan pemeriksaan panitia, status berkas tim kakak saat ini:\n` +
-                      `❌ *BELUM LENGKAP / PERLU REVISI*\n\n` +
-                      `Mohon cek kelengkapan berikut:\n` +
-                      `${listKurang}` + 
-                      `${catatanTambahan}\n\n` +
-                      `Mohon segera dilengkapi ya kak. Terima kasih! 🙏\n\n` +
-                      `_— Admin Pentagon 5_`;
+                      `Berikut adalah QR untuk Absensi.\n\n` +
+                      `🏫 Sekolah: *${x.sekolah}*\n` +
+                      `🔢 No. Tampil: *${x.tampil}*\n\n` +
+                      `Mohon simpan gambar QR Code di atas untuk scan kehadiran saat masuk.`;
             }
 
             document.getElementById('wa-num').value = phone;
