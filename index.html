@@ -538,7 +538,7 @@
                     <td class="text-center bg-light border-start border-end">
                         ${toggleHTML}
                     </td>
-                    <td><div class="d-flex justify-content-center gap-1">${mkChk('lkbbt','LKB')} ${mkChk('maket','MKT')} ${mkChk('dance','DNC')} ${mkChk('ios','IOS')} ${mkChk('poster','POS')}</div></td>
+                    <td><div class="d-flex justify-content-center gap-1">${mkChk('lkbbt','LKBT')} ${mkChk('maket','MKT')} ${mkChk('dance','DNC')} ${mkChk('ios','IOS')} ${mkChk('poster','POS')}</div></td>
                     <td><input type="text" id="note_${x.id}" class="form-control form-control-sm" value="${x.v_note||'-'}" placeholder="Catatan..."></td>
                     <td class="text-center" width="15%">${selectStatus}</td>
                     <td class="text-center text-nowrap">
@@ -937,10 +937,10 @@
                 let listMataLomba = [];
                 
                 if(x.v_lkbbt)  listMataLomba.push("✅ LKBBT");
-                if(x.v_maket)  listMataLomba.push("✅ MAKET");
-                if(x.v_dance)  listMataLomba.push("✅ DANCE");
+                if(x.v_maket)  listMataLomba.push("✅ MAKET PIONERING");
+                if(x.v_dance)  listMataLomba.push("✅ SCOUT DANCE");
                 if(x.v_ios)    listMataLomba.push("✅ IOS");
-                if(x.v_poster) listMataLomba.push("✅ POSTER");
+                if(x.v_poster) listMataLomba.push("✅ POSTER DESIGN");
 
                 let listStr = listMataLomba.length > 0 ? listMataLomba.join("\n") : "(Belum ada mata lomba yang tervalidasi)";
                 let statusFinal = x.v_status || "BELUM LENGKAP";
@@ -1003,3 +1003,4 @@
     </script>
 </body>
 </html>
+
