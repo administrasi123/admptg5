@@ -441,7 +441,6 @@
             document.getElementById('st-absen').innerText = list.filter(x => x.absen).length;
         }
 
-        // --- OPTIMIZED RENDER TABLE INPUT ---
         function renderTableInput() {
             const tbody = document.getElementById('body-input');
             const key = document.getElementById('cari-sekolah').value.toUpperCase();
@@ -488,7 +487,7 @@
             tbody.innerHTML = htmlRows;
         }
 
-        // --- OPTIMIZED RENDER TABLE VALIDASI ---
+        // --- UPDATE: RENDER TABLE DENGAN DROPDOWN STATUS ---
         function renderTableValidasi() {
             const tbody = document.getElementById('body-validasi'); 
             const searchKey = document.getElementById('cari-validasi').value.toUpperCase();
@@ -507,7 +506,6 @@
             }
 
             const htmlRows = list.map(x => {
-                const badge = x.v_status === 'LENGKAP' ? 'bg-success' : 'bg-danger';
                 const mkChk = (col, label) => `<div class="chk-container"><div class="chk-title">${label}</div><input type="checkbox" id="${col}_${x.id}" class="custom-chk" ${x['v_'+col]?'checked':''}><label for="${col}_${x.id}" class="chk-label"><i class="bi bi-check-lg"></i></label></div>`;
                 
                 const toggleHTML = `
@@ -518,13 +516,23 @@
                 <div class="small fw-bold mt-1 ${x.is_submitted?'text-success':'text-secondary'}">${x.is_submitted?'SUDAH':'BELUM'}</div>
                 `;
 
+                // DROPDOWN LOGIC
+                const currentStatus = x.v_status || 'BELUM LENGKAP';
+                const selectStatus = `
+                    <select id="status_${x.id}" class="form-select form-select-sm fw-bold ${currentStatus === 'LENGKAP' ? 'text-success border-success' : 'text-danger border-danger'}" style="font-size: 0.8rem;">
+                        <option value="BELUM LENGKAP" ${currentStatus === 'BELUM LENGKAP' ? 'selected' : ''}>BELUM LENGKAP</option>
+                        <option value="LENGKAP" ${currentStatus === 'LENGKAP' ? 'selected' : ''}>LENGKAP (OK)</option>
+                        <option value="REVISI" ${currentStatus === 'REVISI' ? 'selected' : ''}>PERLU REVISI</option>
+                    </select>
+                `;
+
                 return `
                 <tr class="fade-in">
                     <td class="fw-bold small text-nowrap">
                         <span class="badge bg-secondary me-1" style="font-size:0.7em">${x.tampil}</span> ${x.sekolah}
                         <div class="mt-1 d-flex gap-1">
                             <button onclick="cariDiDrive('${x.sekolah}')" class="btn btn-sm btn-warning text-dark py-0 px-2 shadow-sm" style="font-size: 0.65rem;"><i class="bi bi-search"></i> DRIVE</button>
-                            <button onclick="checkAllBerkas(${x.id})" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.65rem;">SET LENGKAP</button>
+                            <button onclick="checkAllBerkas(${x.id})" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.65rem;">SET ALL</button>
                         </div>
                     </td>
                     <td class="text-center bg-light border-start border-end">
@@ -532,7 +540,7 @@
                     </td>
                     <td><div class="d-flex justify-content-center gap-1">${mkChk('lkbbt','LKB')} ${mkChk('maket','MKT')} ${mkChk('dance','DNC')} ${mkChk('ios','IOS')} ${mkChk('poster','POS')}</div></td>
                     <td><input type="text" id="note_${x.id}" class="form-control form-control-sm" value="${x.v_note||'-'}" placeholder="Catatan..."></td>
-                    <td class="text-center"><span class="badge ${badge} small">${x.v_status}</span></td>
+                    <td class="text-center" width="15%">${selectStatus}</td>
                     <td class="text-center text-nowrap">
                         <div class="btn-group">
                             <button onclick="simpanValidasi(${x.id})" class="btn btn-sm btn-primary" title="Simpan"><i class="bi bi-floppy"></i></button>
@@ -621,13 +629,19 @@
             });
         }
 
+        // --- UPDATE: SIMPAN VALIDASI MANUAL ---
         function simpanValidasi(id) {
             const idx = db.findIndex(x => x.id == id);
             const cols = ['lkbbt','maket','dance','ios','poster'];
-            let complete = true;
-            cols.forEach(c => { const val = document.getElementById(`${c}_${id}`).checked ? 1 : 0; db[idx]['v_'+c] = val; if(!val) complete = false; });
+            
+            cols.forEach(c => { const val = document.getElementById(`${c}_${id}`).checked ? 1 : 0; db[idx]['v_'+c] = val; });
+            
             db[idx].v_note = document.getElementById(`note_${id}`).value;
-            db[idx].v_status = complete ? 'LENGKAP' : 'BELUM LENGKAP';
+            
+            // AMBIL STATUS DARI DROPDOWN
+            const manualStatus = document.getElementById(`status_${id}`).value;
+            db[idx].v_status = manualStatus;
+            
             renderTableValidasi(); updateStats(); toast("Validasi Tersimpan");
             if(!API_URL.includes("GANTI")) fetch(API_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'validate', id:id, ...db[idx], is_submitted: db[idx].is_submitted})});
         }
@@ -903,11 +917,11 @@
                 if(qrCanvas) ctx.drawImage(qrCanvas, 200, 325, 400, 400);
                 ctx.fillStyle = "white"; ctx.font = "bold 60px Monospace"; ctx.fillText(x.kode, 400, 890);
                 const imgUrl = canvas.toDataURL("image/png"); const link = document.createElement('a'); link.download = `ABSENSI_${x.sekolah}.png`; link.href = imgUrl; link.click();
-                setupWA(id, 'qr'); // MENGGUNAKAN MODE 'qr' AGAR PESAN KEMBALI KE ORIGINAL
+                setupWA(id, 'qr'); 
             }, 500);
         }
 
-        // --- FUNGSI UTAMA WA YANG SUDAH DIMODIFIKASI ---
+        // --- UPDATE: SETUP WA PINTAR (HANYA YANG DICEKLIS) ---
         function setupWA(id, type = 'qr') {
             const x = db.find(d => d.id == id);
             if (!x) return;
@@ -919,39 +933,46 @@
             let msg = "";
 
             if (type === 'validation') {
-                // --- PESAN KHUSUS VALIDASI (BARU) ---
-                if (x.v_status === 'LENGKAP') {
-                    msg = `✅ *VALIDASI BERKAS SUKSES*\n` +
+                // LOGIKA: HANYA MELIST YANG DICEKLIS
+                let listMataLomba = [];
+                
+                if(x.v_lkbbt)  listMataLomba.push("✅ LKBBT");
+                if(x.v_maket)  listMataLomba.push("✅ MAKET");
+                if(x.v_dance)  listMataLomba.push("✅ DANCE");
+                if(x.v_ios)    listMataLomba.push("✅ IOS");
+                if(x.v_poster) listMataLomba.push("✅ POSTER");
+
+                let listStr = listMataLomba.length > 0 ? listMataLomba.join("\n") : "(Belum ada mata lomba yang tervalidasi)";
+                let statusFinal = x.v_status || "BELUM LENGKAP";
+                
+                if (statusFinal === 'LENGKAP') {
+                    // PESAN JIKA STATUS SUDAH LENGKAP (PARTIAL PARTICIPATION)
+                    msg = `*VALIDASI BERKAS*\n` +
                           `*PENTAGON 5 VOL.2 2026*\n\n` +
                           `Halo Official *${x.sekolah}*,\n\n` +
-                          `Selamat! Kami informasikan bahwa seluruh berkas administrasi tim kakak telah diperiksa dan dinyatakan:\n` +
-                          `✨ *LENGKAP (VERIFIED)* ✨\n\n` +
-                          `Sampai jumpa di hari perlombaan!🔥\n\n` +
+                          `Panitia telah memvalidasi berkas pendaftaran tim kakak.\n` +
+                          `Berikut adalah daftar mata lomba yang terkonfirmasi diikuti:\n\n` +
+                          `${listStr}\n\n` +
+                          `Status Administrasi: *LENGKAP* ✨\n` +
+                          `Data sudah kami kunci. Sampai jumpa di hari perlombaan!\n\n` +
                           `_— Admin Pentagon 5_`;
-                } else {
-                    let kekurangan = [];
-                    if(!x.v_lkbbt) kekurangan.push("- LKBBT");
-                    if(!x.v_maket) kekurangan.push("- Maket");
-                    if(!x.v_dance) kekurangan.push("- Dance");
-                    if(!x.v_ios) kekurangan.push("- IOS");
-                    if(!x.v_poster) kekurangan.push("- Poster");
-                    
-                    let listKurang = kekurangan.length > 0 ? kekurangan.join("\n") : "";
-                    let catatanTambahan = x.v_note ? `\n\n📝 *Catatan Panitia:*\n"${x.v_note}"` : "";
 
-                    msg = `⚠️ *INFO REVISI BERKAS*\n` +
+                } else {
+                    // PESAN KONFIRMASI (JIKA MASIH ADA YANG KURANG / RAGU)
+                    let note = x.v_note ? `\n\n📝 *Catatan Admin:* "${x.v_note}"` : "";
+
+                    msg = `⚠️ *KONFIRMASI VALIDASI BERKAS*\n` +
                           `*PENTAGON 5 VOL.2 2026*\n\n` +
                           `Halo Official *${x.sekolah}*,\n` +
-                          `Berdasarkan pemeriksaan panitia, status berkas tim kakak saat ini:\n` +
-                          `❌ *BELUM LENGKAP / PERLU REVISI*\n\n` +
-                          `Mohon cek kelengkapan berikut:\n` +
-                          `${listKurang}` + 
-                          `${catatanTambahan}\n\n` +
-                          `Mohon segera dilengkapi ya kak. Terima kasih! 🙏\n\n` +
-                          `_— Admin Pentagon 5_`;
+                          `Saat ini kami baru menerima/memvalidasi berkas untuk mata lomba berikut:\n\n` +
+                          `${listStr}\n\n` +
+                          `Status saat ini: *${statusFinal}*\n` +
+                          `${note}\n` +
+                          `Jika kakak mengikuti mata lomba lain namun belum tercantum di atas, mohon segera kirim berkasnya. Jika sudah sesuai, abaikan pesan ini.\n\n` +
+                          `Terima kasih! 🙏`;
                 }
+
             } else {
-                // --- PESAN ORIGINAL (SESUAI PERMINTAAN) ---
                 msg = `*PENTAGON 5 VOL.2 2026*\n\n` +
                       `Halo Official *${x.sekolah}*,\n` +
                       `Berikut adalah QR untuk Absensi.\n\n` +
@@ -982,4 +1003,3 @@
     </script>
 </body>
 </html>
-
