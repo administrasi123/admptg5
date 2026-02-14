@@ -344,7 +344,7 @@
     <script>
         // --- KONFIGURASI UTAMA ---
         const APP_PASSWORD = "admin123";
-        const API_URL = "https://script.google.com/macros/s/AKfycbxnFon8h-pVczWlzfF2Ccl4aRMP6TO5cOmn23NbyDMmyv4-qGeyPXLQWMQh7T76SxiF/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbx72SErPMnEDCRvOHPNqDc2BX3SNDS2Hj9rH0Tj86b_Q04uESmlEOZoTSjNLXP5xT9a/exec"; 
         
         let db = [];
         let html5QrcodeScanner = null;
@@ -474,6 +474,7 @@
                     <td class="text-center"><span class="badge ${x.tampil==='-'?'bg-secondary':'bg-primary'} fs-6">${x.tampil}</span></td>
                     <td class="font-monospace text-muted">${x.kode||'-'}</td>
                     <td class="text-center text-nowrap">
+                        <button onclick="toggleAbsenManual(${x.id})" class="btn btn-sm ${x.absen ? 'btn-success' : 'btn-outline-secondary'} rounded-circle me-1" title="Absen Manual"><i class="bi bi-person-check-fill"></i></button>
                         <button onclick="toggleTM(${x.id})" class="btn btn-sm ${btnTMClass} rounded-circle me-1">${btnTMIcon}</button>
                         <button onclick="editDataPeserta(${x.id})" class="btn btn-sm btn-warning text-white rounded-circle"><i class="bi bi-pencil-square"></i></button>
                         <button onclick="editUndian(${x.id})" class="btn btn-sm btn-outline-primary rounded-circle"><i class="bi bi-123"></i></button>
@@ -487,7 +488,37 @@
             tbody.innerHTML = htmlRows;
         }
 
-        // --- UPDATE: RENDER TABLE DENGAN DROPDOWN STATUS ---
+        // --- FUNGSI BARU: ABSEN MANUAL ---
+        function toggleAbsenManual(id) {
+            const idx = db.findIndex(x => x.id == id);
+            if (idx >= 0) {
+                db[idx].absen = !db[idx].absen; // Toggle status
+                
+                if (db[idx].absen) {
+                    new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play();
+                    toast(`${db[idx].sekolah} - BERHASIL ABSEN (MANUAL)`, "success");
+                    addLogAbsen(db[idx].id, db[idx].sekolah, "MANUAL"); 
+                } else {
+                    toast(`${db[idx].sekolah} - BATAL HADIR`, "warning");
+                }
+
+                renderTableInput();
+                updateStats();
+
+                if (!API_URL.includes("GANTI")) {
+                    fetch(API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({
+                            action: 'attendance', 
+                            id: db[idx].id, 
+                            status: db[idx].absen
+                        })
+                    });
+                }
+            }
+        }
+
         function renderTableValidasi() {
             const tbody = document.getElementById('body-validasi'); 
             const searchKey = document.getElementById('cari-validasi').value.toUpperCase();
@@ -629,7 +660,6 @@
             });
         }
 
-        // --- UPDATE: SIMPAN VALIDASI MANUAL ---
         function simpanValidasi(id) {
             const idx = db.findIndex(x => x.id == id);
             const cols = ['lkbbt','maket','dance','ios','poster'];
@@ -921,7 +951,6 @@
             }, 500);
         }
 
-        // --- UPDATE: SETUP WA PINTAR (HANYA YANG DICEKLIS) ---
         function setupWA(id, type = 'qr') {
             const x = db.find(d => d.id == id);
             if (!x) return;
@@ -933,7 +962,6 @@
             let msg = "";
 
             if (type === 'validation') {
-                // LOGIKA: HANYA MELIST YANG DICEKLIS
                 let listMataLomba = [];
                 
                 if(x.v_lkbbt)  listMataLomba.push("✅ LKBBT");
@@ -946,7 +974,6 @@
                 let statusFinal = x.v_status || "BELUM LENGKAP";
                 
                 if (statusFinal === 'LENGKAP') {
-                    // PESAN JIKA STATUS SUDAH LENGKAP (PARTIAL PARTICIPATION)
                     msg = `*VALIDASI BERKAS*\n` +
                           `*PENTAGON 5 VOL.2 2026*\n\n` +
                           `Halo Official *${x.sekolah}*,\n\n` +
@@ -958,7 +985,6 @@
                           `_— Admin Pentagon 5_`;
 
                 } else {
-                    // PESAN KONFIRMASI (JIKA MASIH ADA YANG KURANG / RAGU)
                     let note = x.v_note ? `\n\n📝 *Catatan Admin:* "${x.v_note}"` : "";
 
                     msg = `⚠️ *KONFIRMASI VALIDASI BERKAS*\n` +
@@ -1000,7 +1026,50 @@
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // --- AUTO SYNC CERDAS (ANTI KEDIP) ---
+        setInterval(function() {
+            // 1. JANGAN SYNC JIKA SEDANG BUKA MODAL (SUPAYA KETIKAN TIDAK HILANG)
+            if(document.getElementById('modal-input').style.display === 'flex') {
+                return;
+            }
+
+            fetch(API_URL)
+            .then(res => res.json())
+            .then(json => {
+                let newData = json.data || json;
+
+                // 2. BANDINGKAN DATA BARU VS DATA LAMA
+                // Kita ubah objek menjadi string JSON untuk membandingkan isinya
+                const dataLama = JSON.stringify(db);
+                const dataBaru = JSON.stringify(newData);
+
+                if (dataLama !== dataBaru) {
+                    // HANYA JIKA ADA PERUBAHAN, KITA UPDATE LAYAR
+                    console.log("Ada perubahan data! Mengupdate tampilan...");
+                    
+                    db = newData; // Simpan data baru ke variabel global
+                    
+                    // Simpan posisi scroll agar user tidak kaget
+                    const scrollPos = window.scrollY;
+                    
+                    // Update tampilan (Hanya saat ini kedipan akan terjadi, tapi sangat jarang)
+                    renderTableInput();
+                    renderTableValidasi();
+                    updateStats();
+                    
+                    // Kembalikan posisi scroll
+                    window.scrollTo(0, scrollPos);
+                } else {
+                    // JIKA DATA SAMA, JANGAN NGAPA-NGAPAIN
+                    // console.log("Data stabil (tidak ada perubahan).");
+                }
+            })
+            .catch(err => {
+                // Silent catch (biarkan saja jika internet putus nyambung)
+            });
+        }, 5000); // Cek setiap 5 detik
+
     </script>
 </body>
 </html>
-
